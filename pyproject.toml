@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "resfo-utilities"
+description="A utility library for working with the output of reservoir simulators."
+readme = "README.md"
+classifiers=[
+    "Development Status :: 1 - Planning",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = ["numpy"]
+dynamic=["version"]
+
+authors = [
+    {name="Equinor", email="fg_sib-scout@equinor.com"},
+]
+
+maintainers = [
+    {name="Eivind Jahren", email="ejah@equinor.com"},
+]
+
+[project.license]
+text = "LGPL-3.0"
+
+[project.urls]
+"Homepage" = "https://github.com/equinor/resfo-utilities"
+"Repository" = "https://github.com/equinor/resfo-utilities"
+"Bug Tracker" = "https://github.com/equinor/resfo-utilities/issues"
+
+[project.optional-dependencies]
+doc = [
+    "sphinx",
+    "sphinx-rtd-theme",
+]
+dev = [
+    "pytest",
+    "hypothesis",
+    "pre-commit"
+]
+
+[tool.setuptools_scm]
+
+[tool.ruff]
+src = ["src"]
+line-length = 88
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"

@@ -1,0 +1,43 @@
+name: Type checking
+
+on:
+ push:
+   branches:
+     - main
+ pull_request:
+
+env:
+  UV_FROZEN: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  type-checking:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+        filter: tree:0
+
+    - uses: actions/setup-python@v6
+      with:
+        python-version: "3.14"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+        python-version: "3.14"
+
+    - run: |
+        uv sync --extra dev
+
+    - run: echo ::add-matcher::.github/mypy-matcher.json
+    - name: Run mypy
+      run: |
+        uv run mypy src
