@@ -43,7 +43,8 @@ doc = [
 dev = [
     "pytest",
     "hypothesis",
-    "pre-commit"
+    "pre-commit",
+    "mypy",
 ]
 
 [tool.setuptools_scm]
