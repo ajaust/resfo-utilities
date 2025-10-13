@@ -7,7 +7,7 @@ from resfo_utilities import CornerpointGrid
 
 
 @pytest.fixture
-def eightcells(tmp_path: Path):
+def eightcells(tmp_path: Path) -> None:
     (tmp_path / "EIGHTCELLS.DATA").write_text(
         dedent(
             """\
@@ -193,7 +193,19 @@ def eightcells(tmp_path: Path):
 
 @pytest.mark.usefixtures("eightcells")
 @pytest.mark.skipif(not shutil.which("flow"), reason="flow not available")
-def test_that_we_can_read_the_eightcells_grid_from_flow(tmp_path):
+def test_that_we_can_read_the_eightcells_grid_from_flow(tmp_path: Path) -> None:
     subprocess.check_output(["flow", str(tmp_path / "EIGHTCELLS")])
 
-    _ = CornerpointGrid.read_egrid(str(tmp_path / "EIGHTCELLS.EGRID"))
+    grid = CornerpointGrid.read_egrid(str(tmp_path / "EIGHTCELLS.EGRID"))
+
+    assert grid.coord.shape == (3, 3, 2, 3)
+    print(grid.coord)
+    assert grid.coord[0, 0].tolist() == [[0, 0, 0], [0, 0, 100]]
+    assert grid.coord[1, 0].tolist() == [[50, 0, 0], [50, 0, 100]]
+    assert grid.coord[2, 0].tolist() == [[100, 0, 0], [100, 0, 100]]
+    assert grid.coord[0, 1].tolist() == [[0, 50, 0], [0, 50, 100]]
+    assert grid.coord[1, 1].tolist() == [[50, 50, 0], [50, 50, 100]]
+    assert grid.coord[2, 1].tolist() == [[100, 50, 0], [100, 50, 100]]
+    assert grid.coord[0, 2].tolist() == [[0, 100, 0], [0, 100, 100]]
+    assert grid.coord[1, 2].tolist() == [[50, 100, 0], [50, 100, 100]]
+    assert grid.coord[2, 2].tolist() == [[100, 100, 0], [100, 100, 100]]

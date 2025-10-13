@@ -556,10 +556,23 @@ wheels = [
 ]
 
 [[package]]
+name = "resfo"
+version = "4.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/60/0b/453847d8b015706d3fe353588b04bfb0034430af0ddcc50ef281fd842935/resfo-4.3.0.tar.gz", hash = "sha256:3be7dad6e582468449e4db06a4ea388ac9e379cb6ddea7f7d83fc39902af58bb", size = 30139, upload-time = "2025-10-10T08:13:30.386Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f9/54/eb2107088902af8afa3cdbede011e829b65c228bd5a8c1d177c505eaac1a/resfo-4.3.0-py3-none-any.whl", hash = "sha256:bbd4ebc1612f8acc37af54997f46204eefc79c820077a3e9645321212d483082", size = 18534, upload-time = "2025-10-10T08:13:28.769Z" },
+]
+
+[[package]]
 name = "resfo-utilities"
 source = { editable = "." }
 dependencies = [
     { name = "numpy" },
+    { name = "resfo" },
 ]
 
 [package.optional-dependencies]
@@ -581,6 +594,7 @@ requires-dist = [
     { name = "numpy" },
     { name = "pre-commit", marker = "extra == 'dev'" },
     { name = "pytest", marker = "extra == 'dev'" },
+    { name = "resfo" },
     { name = "sphinx", marker = "extra == 'doc'" },
     { name = "sphinx-rtd-theme", marker = "extra == 'doc'" },
 ]
