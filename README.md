@@ -38,5 +38,5 @@ You should set up `pre-commit` to ensure style checks are done as you commit:
 
 ```bash
 pip install pre-commit
-pre-commit install
+pre-commit install --hook-type pre-push
 ```
