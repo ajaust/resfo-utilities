@@ -53,3 +53,6 @@ line-length = 88
 
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers"
+
+[tool.uv]
+fork-strategy = "requires-python"
