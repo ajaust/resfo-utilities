@@ -37,6 +37,5 @@ uv sync --all-extras
 You should set up `pre-commit` to ensure style checks are done as you commit:
 
 ```bash
-pip install pre-commit
-pre-commit install --hook-type pre-push
+uv run pre-commit install --hook-type pre-push
 ```
