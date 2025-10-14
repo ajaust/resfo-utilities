@@ -1,5 +1,5 @@
 import os
-from typing import Self
+from typing import Self, Any, IO, TypeVar
 from dataclasses import dataclass
 from numpy import typing as npt
 import numpy as np
@@ -15,26 +15,72 @@ class CornerpointGrid:
     coord: npt.NDArray[np.float32]
 
     @classmethod
-    def read_egrid(cls, filename: str | os.PathLike) -> Self:
+    def read_egrid(cls, file_like: str | os.PathLike | IO[Any]) -> Self:
         coord = None
         dims = None
-        for entry in resfo.lazy_read(filename):
-            match entry.read_keyword():
-                case "COORD   ":
-                    coord = entry.read_array()
-                case "GRIDHEAD":
-                    array = entry.read_array()
-                    if len(array) < 4:
-                        raise InvalidEgridFileError(
-                            f"GRIDHEAD in EGRID file {filename} contained too few elements"
-                        )
-                    dims = tuple(array[1:4])
+        opened = False
+        stream = None
 
-        if coord is None:
-            raise InvalidEgridFileError(f"EGRID file {filename} did not contain COORD")
-        if dims is None:
+        try:
+            if isinstance(file_like, str):
+                filename = file_like
+                mode = "rt" if filename.lower().endswith("fegrid") else "rb"
+                stream = open(filename, mode=mode)
+                opened = True
+            elif isinstance(file_like, os.PathLike):
+                filename = str(file_like)
+                mode = "rt" if filename.lower().endswith("fegrid") else "rb"
+                stream = open(filename, mode=mode)
+                opened = True
+            else:
+                filename = getattr(file_like, "name", "unknown stream")
+                stream = file_like
+
+            T = TypeVar("T", bound=np.generic)
+
+            def validate_array(
+                name: str,
+                array: npt.NDArray[T] | resfo.MESS,
+                min_length: int | None = None,
+            ) -> npt.NDArray[T]:
+                if array is resfo.MESS or isinstance(array, resfo.MESS):
+                    raise InvalidEgridFileError(
+                        f"Expected Array for keyword {name} in {filename} but got MESS"
+                    )
+                if min_length is not None and len(array) < min_length:
+                    raise InvalidEgridFileError(
+                        f"{name} in EGRID file {filename} contained too few elements"
+                    )
+
+                return array
+
+            for entry in resfo.lazy_read(stream):
+                kw = entry.read_keyword()
+                match kw:
+                    case "COORD   ":
+                        coord = validate_array(kw, entry.read_array())
+                    case "GRIDHEAD":
+                        array = validate_array(kw, entry.read_array(), 4)
+                        dims = tuple(array[1:4])
+
+            if coord is None:
+                raise InvalidEgridFileError(
+                    f"EGRID file {filename} did not contain COORD"
+                )
+            if dims is None:
+                raise InvalidEgridFileError(
+                    f"EGRID file {filename} did not contain dimensions"
+                )
+        except resfo.ResfoParsingError as err:
+            raise InvalidEgridFileError(f"Could not parse EGRID file: {err}") from err
+        finally:
+            if opened and stream is not None:
+                stream.close()
+        try:
+            coord = np.swapaxes(coord.reshape((dims[1] + 1, dims[0] + 1, 2, 3)), 0, 1)
+        except ValueError as err:
             raise InvalidEgridFileError(
-                f"EGRID file {filename} did not contain dimensions"
-            )
-
-        return cls(np.swapaxes(coord.reshape((dims[1] + 1, dims[0] + 1, 2, 3)), 0, 1))
+                f"COORD size {len(coord)} did not match"
+                f" grid dimensions {dims} in {filename}"
+            ) from err
+        return cls(coord)

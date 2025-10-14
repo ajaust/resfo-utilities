@@ -1,3 +1,3 @@
-from ._cornerpoint_grid import CornerpointGrid
+from ._cornerpoint_grid import CornerpointGrid, InvalidEgridFileError
 
-__all__ = ["CornerpointGrid"]
+__all__ = ["CornerpointGrid", "InvalidEgridFileError"]
