@@ -4,6 +4,7 @@ from textwrap import dedent
 import subprocess
 import shutil
 from resfo_utilities import CornerpointGrid
+from pytest import approx
 
 
 @pytest.fixture
@@ -42,34 +43,34 @@ def eightcells(tmp_path: Path) -> None:
         NEWTRAN
 
         COORD
-            0   0   0     0   0 100
-           50   0   0    50   0 100
-          100   0   0   100   0 100
-            0  50   0     0  50 100
-           50  50   0    50  50 100
-          100  50   0   100  50 100
-            0 100   0     0 100 100
-           50 100   0    50 100 100
-          100 100   0   100 100 100
+            0.1   0.2   0.3     0.4   0.5 100.6
+           50.7   0.8   0.9    51.1   1.2 101.3
+          101.4   1.5   1.6   101.7   1.8 101.9
+            2.0  52.1  52.3     2.4  52.5 102.6
+           52.7  52.8   2.9    53.0  53.1 103.2
+          103.3  53.4   3.5   103.6  53.7 103.8
+            3.9 104.0   4.1     4.2 104.3 104.4
+           54.5 104.6   4.7    54.8 104.9 105.0
+          105.1 105.2   5.3   105.4 105.5 105.6
         /
 
         ZCORN
-        0 0 0 0
-        0 0 0 0
-        0 0 0 0
-        0 0 0 0
-        50 50 50 50
-        50 50 50 50
-        50 50 50 50
-        50 50 50 50
-        50 50 50 50
-        50 50 50 50
-        50 50 50 50
-        50 50 50 50
-        100 100 100 100
-        100 100 100 100
-        100 100 100 100
-        100 100 100 100
+        0.0 0.1 0.2 0.3
+        0.4 0.5 0.6 0.7
+        0.8 0.9 1.0 1.1
+        1.2 1.3 1.4 1.5
+        50.0 50.1 50.2 50.3
+        50.4 50.5 50.6 50.7
+        50.8 50.9 51.0 51.1
+        51.2 51.3 51.4 51.5
+        51.6 51.7 51.8 51.9
+        52.0 52.1 52.2 52.3
+        52.4 52.5 52.6 52.7
+        52.8 52.9 53.0 53.1
+        100.0 100.1 100.2 100.3
+        100.4 100.5 100.6 100.7
+        100.8 100.9 101.0 101.1
+        101.2 101.3 101.4 101.5
         /
 
 
@@ -199,13 +200,68 @@ def test_that_we_can_read_the_eightcells_grid_from_flow(tmp_path: Path) -> None:
     grid = CornerpointGrid.read_egrid(str(tmp_path / "EIGHTCELLS.EGRID"))
 
     assert grid.coord.shape == (3, 3, 2, 3)
-    print(grid.coord)
-    assert grid.coord[0, 0].tolist() == [[0, 0, 0], [0, 0, 100]]
-    assert grid.coord[1, 0].tolist() == [[50, 0, 0], [50, 0, 100]]
-    assert grid.coord[2, 0].tolist() == [[100, 0, 0], [100, 0, 100]]
-    assert grid.coord[0, 1].tolist() == [[0, 50, 0], [0, 50, 100]]
-    assert grid.coord[1, 1].tolist() == [[50, 50, 0], [50, 50, 100]]
-    assert grid.coord[2, 1].tolist() == [[100, 50, 0], [100, 50, 100]]
-    assert grid.coord[0, 2].tolist() == [[0, 100, 0], [0, 100, 100]]
-    assert grid.coord[1, 2].tolist() == [[50, 100, 0], [50, 100, 100]]
-    assert grid.coord[2, 2].tolist() == [[100, 100, 0], [100, 100, 100]]
+    assert grid.coord[0, 0].tolist() == [
+        approx([0.1, 0.2, 0.3]),
+        approx([0.4, 0.5, 100.6]),
+    ]
+    assert grid.coord[1, 0].tolist() == [
+        approx([50.7, 0.8, 0.9]),
+        approx([51.1, 1.2, 101.3]),
+    ]
+    assert grid.coord[2, 0].tolist() == [
+        approx([101.4, 1.5, 1.6]),
+        approx([101.7, 1.8, 101.9]),
+    ]
+    assert grid.coord[0, 1].tolist() == [
+        approx([2.0, 52.1, 52.3]),
+        approx([2.4, 52.5, 102.6]),
+    ]
+    assert grid.coord[1, 1].tolist() == [
+        approx([52.7, 52.8, 2.9]),
+        approx([53.0, 53.1, 103.2]),
+    ]
+    assert grid.coord[2, 1].tolist() == [
+        approx([103.3, 53.4, 3.5]),
+        approx([103.6, 53.7, 103.8]),
+    ]
+    assert grid.coord[0, 2].tolist() == [
+        approx([3.9, 104.0, 4.1]),
+        approx([4.2, 104.3, 104.4]),
+    ]
+    assert grid.coord[1, 2].tolist() == [
+        approx([54.5, 104.6, 4.7]),
+        approx([54.8, 104.9, 105.0]),
+    ]
+    assert grid.coord[2, 2].tolist() == [
+        approx([105.1, 105.2, 5.3]),
+        approx([105.4, 105.5, 105.6]),
+    ]
+
+    assert grid.zcorn.shape == (2, 2, 2, 8)
+    # Order of heights for each corner is
+    # (N(orth) means higher y, E(east) means higer x, A(bove) means lower z (depth))
+    # SWA SEA NWA NEA SWB SEB NWB NEB
+    assert grid.zcorn[0, 0, 0, :].tolist() == approx(
+        [0.0, 0.1, 0.4, 0.5, 50.0, 50.1, 50.4, 50.5],
+    )
+    assert grid.zcorn[1, 0, 0, :].tolist() == approx(
+        [0.2, 0.3, 0.6, 0.7, 50.2, 50.3, 50.6, 50.7],
+    )
+    assert grid.zcorn[0, 1, 0, :].tolist() == approx(
+        [0.8, 0.9, 1.2, 1.3, 50.8, 50.9, 51.2, 51.3],
+    )
+    assert grid.zcorn[1, 1, 0, :].tolist() == approx(
+        [1.0, 1.1, 1.4, 1.5, 51.0, 51.1, 51.4, 51.5],
+    )
+    assert grid.zcorn[0, 0, 1, :].tolist() == approx(
+        [51.6, 51.7, 52.0, 52.1, 100.0, 100.1, 100.4, 100.5],
+    )
+    assert grid.zcorn[1, 0, 1, :].tolist() == approx(
+        [51.8, 51.9, 52.2, 52.3, 100.2, 100.3, 100.6, 100.7],
+    )
+    assert grid.zcorn[0, 1, 1, :].tolist() == approx(
+        [52.4, 52.5, 52.8, 52.9, 100.8, 100.9, 101.2, 101.3],
+    )
+    assert grid.zcorn[1, 1, 1, :].tolist() == approx(
+        [52.6, 52.7, 53.0, 53.1, 101.0, 101.1, 101.4, 101.5],
+    )

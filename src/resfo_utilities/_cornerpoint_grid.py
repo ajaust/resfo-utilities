@@ -13,11 +13,13 @@ class InvalidEgridFileError(ValueError):
 @dataclass
 class CornerpointGrid:
     coord: npt.NDArray[np.float32]
+    zcorn: npt.NDArray[np.float32]
 
     @classmethod
     def read_egrid(cls, file_like: str | os.PathLike[str] | IO[Any]) -> Self:
         coord = None
         dims = None
+        zcorn = None
         opened = False
         stream = None
 
@@ -57,6 +59,8 @@ class CornerpointGrid:
             for entry in resfo.lazy_read(stream):
                 kw = entry.read_keyword()
                 match kw:
+                    case "ZCORN   ":
+                        zcorn = validate_array(kw, entry.read_array())
                     case "COORD   ":
                         coord = validate_array(kw, entry.read_array())
                     case "GRIDHEAD":
@@ -66,6 +70,10 @@ class CornerpointGrid:
             if coord is None:
                 raise InvalidEgridFileError(
                     f"EGRID file {filename} did not contain COORD"
+                )
+            if zcorn is None:
+                raise InvalidEgridFileError(
+                    f"EGRID file {filename} did not contain ZCORN"
                 )
             if dims is None:
                 raise InvalidEgridFileError(
@@ -83,4 +91,13 @@ class CornerpointGrid:
                 f"COORD size {len(coord)} did not match"
                 f" grid dimensions {dims} in {filename}"
             ) from err
-        return cls(coord)
+        try:
+            zcorn = zcorn.reshape(2, dims[0], 2, dims[1], 2, dims[2], order="F")
+            zcorn = np.moveaxis(zcorn, [1, 3, 5, 4, 2], [0, 1, 2, 3, 4])
+            zcorn = zcorn.reshape((dims[0], dims[1], dims[2], 8))
+        except ValueError as err:
+            raise InvalidEgridFileError(
+                f"ZCORN size {len(zcorn)} did not match"
+                f" grid dimensions {dims} in {filename}"
+            ) from err
+        return cls(coord, zcorn)

@@ -32,6 +32,10 @@ def test_that_read_egrid_raises_invalid_egrid_file_when_coord_has_too_many_value
     with pytest.raises(InvalidEgridFileError, match="did not match grid dimensions"):
         CornerpointGrid.read_egrid(
             write_to_buffer(
-                [("GRIDHEAD", [1, 1, 1, 1]), ("COORD   ", [1.0])],
+                [
+                    ("GRIDHEAD", [1, 1, 1, 1]),
+                    ("COORD   ", [1.0]),
+                    ("ZCORN   ", [1.0] * 8),
+                ],
             )
         )
