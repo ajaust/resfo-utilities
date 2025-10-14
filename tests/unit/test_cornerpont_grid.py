@@ -39,3 +39,13 @@ def test_that_read_egrid_raises_invalid_egrid_file_when_coord_has_too_many_value
                 ],
             )
         )
+
+
+def test_that_read_egrid_raises_invalid_egrid_file_when_mapaxes_is_mess():
+    with pytest.raises(InvalidEgridFileError, match="MESS"):
+        CornerpointGrid.read_egrid(write_to_buffer([("MAPAXES ", resfo.MESS)]))
+
+
+def test_that_read_egrid_raises_invalid_egrid_file_when_mapaxes_has_too_many_values():
+    with pytest.raises(InvalidEgridFileError, match="contained too few elements"):
+        CornerpointGrid.read_egrid(write_to_buffer([("MAPAXES ", [1.0])]))

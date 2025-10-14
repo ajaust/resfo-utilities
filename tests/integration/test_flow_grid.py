@@ -3,7 +3,7 @@ from pathlib import Path
 from textwrap import dedent
 import subprocess
 import shutil
-from resfo_utilities import CornerpointGrid
+from resfo_utilities import CornerpointGrid, MapAxes
 from pytest import approx
 
 
@@ -72,6 +72,10 @@ def eightcells(tmp_path: Path) -> None:
         100.8 100.9 101.0 101.1
         101.2 101.3 101.4 101.5
         /
+
+        -- X1 Y1 X2 Y2 X3 Y3
+        MAPAXES
+         0.01 1.01 0.01 0.01 1.01 0.01 /
 
 
         PORO
@@ -264,4 +268,9 @@ def test_that_we_can_read_the_eightcells_grid_from_flow(tmp_path: Path) -> None:
     )
     assert grid.zcorn[1, 1, 1, :].tolist() == approx(
         [52.6, 52.7, 53.0, 53.1, 101.0, 101.1, 101.4, 101.5],
+    )
+    assert grid.map_axes == MapAxes(
+        y_axis=approx((0.01, 1.01)),
+        origin=approx((0.01, 0.01)),
+        x_axis=approx((1.01, 0.01)),
     )

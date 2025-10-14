@@ -11,9 +11,17 @@ class InvalidEgridFileError(ValueError):
 
 
 @dataclass
+class MapAxes:
+    y_axis: tuple[np.float32, np.float32]
+    origin: tuple[np.float32, np.float32]
+    x_axis: tuple[np.float32, np.float32]
+
+
+@dataclass
 class CornerpointGrid:
     coord: npt.NDArray[np.float32]
     zcorn: npt.NDArray[np.float32]
+    map_axes: MapAxes | None = None
 
     @classmethod
     def read_egrid(cls, file_like: str | os.PathLike[str] | IO[Any]) -> Self:
@@ -22,6 +30,7 @@ class CornerpointGrid:
         zcorn = None
         opened = False
         stream = None
+        map_axes = None
 
         try:
             if isinstance(file_like, str):
@@ -66,6 +75,13 @@ class CornerpointGrid:
                     case "GRIDHEAD":
                         array = validate_array(kw, entry.read_array(), 4)
                         dims = tuple(array[1:4])
+                    case "MAPAXES ":
+                        array = validate_array(kw, entry.read_array(), 6)
+                        map_axes = MapAxes(
+                            (array[0], array[1]),
+                            (array[2], array[3]),
+                            (array[4], array[5]),
+                        )
 
             if coord is None:
                 raise InvalidEgridFileError(
@@ -100,4 +116,4 @@ class CornerpointGrid:
                 f"ZCORN size {len(zcorn)} did not match"
                 f" grid dimensions {dims} in {filename}"
             ) from err
-        return cls(coord, zcorn)
+        return cls(coord, zcorn, map_axes)
