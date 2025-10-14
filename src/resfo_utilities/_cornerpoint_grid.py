@@ -15,7 +15,7 @@ class CornerpointGrid:
     coord: npt.NDArray[np.float32]
 
     @classmethod
-    def read_egrid(cls, file_like: str | os.PathLike | IO[Any]) -> Self:
+    def read_egrid(cls, file_like: str | os.PathLike[str] | IO[Any]) -> Self:
         coord = None
         dims = None
         opened = False
