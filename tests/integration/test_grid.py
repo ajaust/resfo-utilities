@@ -2,7 +2,6 @@ import pytest
 from pathlib import Path
 from textwrap import dedent
 import subprocess
-import shutil
 from resfo_utilities import CornerpointGrid, MapAxes
 from pytest import approx
 
@@ -197,9 +196,10 @@ def eightcells(tmp_path: Path) -> None:
 
 
 @pytest.mark.usefixtures("eightcells")
-@pytest.mark.skipif(not shutil.which("flow"), reason="flow not available")
-def test_that_we_can_read_the_eightcells_grid_from_flow(tmp_path: Path) -> None:
-    subprocess.check_output(["flow", str(tmp_path / "EIGHTCELLS")])
+def test_that_we_can_read_the_eightcells_grid_from_the_simulator(
+    tmp_path: Path, simulator_cmd: list[str]
+) -> None:
+    subprocess.run(simulator_cmd + [str(tmp_path / "EIGHTCELLS")])
 
     grid = CornerpointGrid.read_egrid(str(tmp_path / "EIGHTCELLS.EGRID"))
 
