@@ -56,7 +56,34 @@ def pad_to(lst: list[int], target_len: int):
     return np.pad(lst, (0, target_len - len(lst)), mode="constant")
 
 
-def test_that_read_egrid_fetches_the_geometry_from_the_global_grid_in_the_file():
+@pytest.mark.parametrize(
+    "contents_after_global_grid",
+    [
+        [],
+        [
+            ("LGR     ", np.array([b"LGR1    "], dtype="|S8")),
+            ("LGRPARNT", np.array([b"        "], dtype="|S8")),
+            (
+                "GRIDHEAD",
+                pad_to([1, 2, 2, 2, 1] + [0] * 19 + [1, 1, 0, 2, 2, 2, 2, 2, 2], 100),
+            ),
+            ("COORD   ", np.arange(200, 254)),
+            ("ZCORN   ", np.arange(300, 364)),
+            ("ACTNUM  ", np.array([1, 1, 1, 1, 1, 1, 1, 1], dtype=">i4")),
+            ("HOSTNUM ", np.array([8, 8, 8, 8, 8, 8, 8, 8], dtype=">i4")),
+            ("ENDGRID ", np.array([], dtype=">i4")),
+            ("ENDLGR  ", np.array([], dtype=">i4")),
+            ("NNCHEAD ", pad_to([0, 1], 10)),
+            ("NNC1    ", np.array([], dtype=">i4")),
+            ("NNC2    ", np.array([], dtype=">i4")),
+            ("NNCL    ", np.array([], dtype=">i4")),
+            ("NNCG    ", np.array([], dtype=">i4")),
+        ],
+    ],
+)
+def test_that_read_egrid_fetches_the_geometry_from_the_global_grid_in_the_file(
+    contents_after_global_grid,
+):
     grid = CornerpointGrid.read_egrid(
         write_to_buffer(
             [
@@ -68,6 +95,7 @@ def test_that_read_egrid_fetches_the_geometry_from_the_global_grid_in_the_file()
                 ("ZCORN   ", np.arange(100, 164, dtype=">f4")),
                 ("ACTNUM  ", np.ones((8,), dtype=">i4")),
                 ("ENDGRID ", np.array([], dtype=">i4")),
+                *contents_after_global_grid,
             ]
         )
     )
