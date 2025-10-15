@@ -4,13 +4,43 @@ from textwrap import dedent
 import subprocess
 from resfo_utilities import CornerpointGrid, MapAxes
 from pytest import approx
+from dataclasses import dataclass
 
 
-@pytest.fixture
-def eightcells(tmp_path: Path) -> None:
+@dataclass
+class AdditionalDeckContents:
+    runspec: str = ""
+    grid: str = ""
+
+
+@pytest.fixture(
+    params=[
+        pytest.param(AdditionalDeckContents(), id="Only global grid"),
+        pytest.param(
+            AdditionalDeckContents(
+                runspec=dedent("""\
+                LGR
+                 1 8 3*0 /
+                 """),
+                grid=dedent("""\
+                CARFIN
+                     'LGR1' 6*2 4*2
+                /
+                ENDFIN
+                 """),
+            ),
+            id="With one LGR grid",
+        ),
+    ]
+)
+def eightcells(request, simulator_cmd: list[str], tmp_path: Path) -> None:
+    additions = request.param
+    if simulator_cmd[0].endswith("flow") and "LGR" in additions.runspec:
+        pytest.skip(reason="flow does not support LGR")
+
     (tmp_path / "EIGHTCELLS.DATA").write_text(
         dedent(
-            """\
+            f"""\
         RUNSPEC
 
         DIMENS
@@ -36,6 +66,7 @@ def eightcells(tmp_path: Path) -> None:
 
         UNIFOUT
 
+        {additions.runspec}
 
         GRID
 
@@ -97,6 +128,8 @@ def eightcells(tmp_path: Path) -> None:
         GRIDFILE
         0 1
         /
+
+        {additions.grid}
 
         INIT
 
