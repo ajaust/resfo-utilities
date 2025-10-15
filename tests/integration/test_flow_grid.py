@@ -243,8 +243,8 @@ def test_that_we_can_read_the_eightcells_grid_from_flow(tmp_path: Path) -> None:
 
     assert grid.zcorn.shape == (2, 2, 2, 8)
     # Order of heights for each corner is
-    # (N(orth) means higher y, E(east) means higer x, A(bove) means lower z (depth))
-    # SWA SEA NWA NEA SWB SEB NWB NEB
+    # (N(orth) means higher y, E(east) means higer x, T(op) means lower z (depth))
+    # TSW TSE TNW TNE BSW BSE BNW BNE
     assert grid.zcorn[0, 0, 0, :].tolist() == approx(
         [0.0, 0.1, 0.4, 0.5, 50.0, 50.1, 50.4, 50.5],
     )

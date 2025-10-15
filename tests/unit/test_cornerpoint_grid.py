@@ -106,8 +106,8 @@ def test_that_read_egrid_fetches_the_geometry_from_the_global_grid_in_the_file()
     # where the 8 values describe depth of the corners
     # for cell (i,j,k)
     # Order of heights for each corner is
-    # (N(orth) means higher y, E(east) means higer x, A(bove) means lower z (depth))
-    # SWA SEA NWA NEA SWB SEB NWB NEB
+    # (N(orth) means higher y, E(east) means higer x, T(op) means lower z (depth))
+    # TSW TSE TNW TNE BSW BSE BNW BNE
 
     # The opm manual describes the order of the input as follows:
     # "ZCORN defines the depth of each corner point of a grid block
