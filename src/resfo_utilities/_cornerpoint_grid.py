@@ -82,6 +82,8 @@ class CornerpointGrid:
                             (array[2], array[3]),
                             (array[4], array[5]),
                         )
+                    case "ENDGRID ":
+                        break
 
             if coord is None:
                 raise InvalidEgridFileError(

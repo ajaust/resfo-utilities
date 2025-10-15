@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from textwrap import dedent
+from textwrap import dedent, indent
 import subprocess
 from resfo_utilities import CornerpointGrid, MapAxes
 from pytest import approx
@@ -20,11 +20,12 @@ class AdditionalDeckContents:
             AdditionalDeckContents(
                 runspec=dedent("""\
                 LGR
-                 1 8 3*0 /
+                1 8 3*0
+                /
                  """),
                 grid=dedent("""\
                 CARFIN
-                     'LGR1' 6*2 4*2
+                'LGR1' 6*2 4*2
                 /
                 ENDFIN
                  """),
@@ -37,7 +38,7 @@ def eightcells(request, simulator_cmd: list[str], tmp_path: Path) -> None:
     additions = request.param
     if simulator_cmd[0].endswith("flow") and "LGR" in additions.runspec:
         pytest.skip(reason="flow does not support LGR")
-
+    nl = "\n"
     (tmp_path / "EIGHTCELLS.DATA").write_text(
         dedent(
             f"""\
@@ -66,7 +67,7 @@ def eightcells(request, simulator_cmd: list[str], tmp_path: Path) -> None:
 
         UNIFOUT
 
-        {additions.runspec}
+        {nl + indent(additions.runspec, " " * 8)}
 
         GRID
 
@@ -129,7 +130,7 @@ def eightcells(request, simulator_cmd: list[str], tmp_path: Path) -> None:
         0 1
         /
 
-        {additions.grid}
+        {nl + indent(additions.grid, " " * 8)}
 
         INIT
 
