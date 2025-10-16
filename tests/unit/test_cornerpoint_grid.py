@@ -179,4 +179,44 @@ def test_that_get_xy_meshgrid_at_z_returns_meshgrid():
         ]
     )
     grid = CornerpointGrid(coord, None, None)
-    assert grid.get_xy_meshgrid_at_z(50.0).tolist() == [[0.5, 5.0], [15.0, 25.0]]
+    assert grid.get_xy_meshgrid_at_z(50.0).tolist() == [[[0.5, 5.0], [15.0, 25.0]]]
+
+
+def test_that_get_xy_meshgrid_at_z_keeps_same_shape_as_coord_in_i_j_dimensions():
+    coord = np.array(
+        [
+            [
+                [[0.0, 1.0, 100.0], [0.0, 1.0, 200.0]],
+                [[2.0, 3.0, 101.0], [2.0, 3.0, 201.0]],
+                [[4.0, 5.0, 102.0], [4.0, 5.0, 202.0]],
+            ],
+            [
+                [[6.0, 7.0, 103.0], [6.0, 7.0, 203.0]],
+                [[8.0, 9.0, 104.0], [8.0, 9.0, 204.0]],
+                [[10.0, 11.0, 105.0], [10.0, 11.0, 205.0]],
+            ],
+            [
+                [[12.0, 13.0, 106.0], [12.0, 13.0, 206.0]],
+                [[14.0, 15.0, 107.0], [14.0, 15.0, 207.0]],
+                [[16.0, 17.0, 108.0], [16.0, 17.0, 208.0]],
+            ],
+        ]
+    )
+    grid = CornerpointGrid(coord, None, None)
+    assert grid.get_xy_meshgrid_at_z(50.0).tolist() == [
+        [
+            [0.0, 1.0],
+            [2.0, 3.0],
+            [4.0, 5.0],
+        ],
+        [
+            [6.0, 7.0],
+            [8.0, 9.0],
+            [10.0, 11.0],
+        ],
+        [
+            [12.0, 13.0],
+            [14.0, 15.0],
+            [16.0, 17.0],
+        ],
+    ]

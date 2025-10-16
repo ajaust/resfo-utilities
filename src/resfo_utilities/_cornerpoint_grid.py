@@ -131,4 +131,5 @@ class CornerpointGrid:
         y = y1 + t * (y2 - y1)
 
         # Result: (x, y) coordinates for all lines at z
-        return np.column_stack((x, y))
+        result = np.column_stack((x, y))
+        return result.reshape(shape[0], shape[1], 2)
