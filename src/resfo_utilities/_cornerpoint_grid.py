@@ -119,3 +119,16 @@ class CornerpointGrid:
                 f" grid dimensions {dims} in {filename}"
             ) from err
         return cls(coord, zcorn, map_axes)
+
+    def get_xy_meshgrid_at_z(self: Self, z: np.float32) -> npt.NDArray[np.float32]:
+        shape = self.coord.shape
+        coord = self.coord.reshape(shape[0] * shape[1], shape[2] * shape[3])
+        x1, y1, z1, x2, y2, z2 = coord.T
+        t = (z - z1) / (z2 - z1)
+
+        # Compute x and y for all lines
+        x = x1 + t * (x2 - x1)
+        y = y1 + t * (y2 - y1)
+
+        # Result: (x, y) coordinates for all lines at z
+        return np.column_stack((x, y))
