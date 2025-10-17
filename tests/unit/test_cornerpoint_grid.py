@@ -222,3 +222,18 @@ def test_that_pillars_z_plane_intersection_keeps_same_shape_as_coord_in_i_j_dime
             [16.0, 17.0],
         ],
     ]
+
+
+def test_that_interior_points_are_in_the_cell():
+    g = CornerpointGrid(
+        coord=np.array(
+            [
+                [[[0, 0, 0], [0, 0, 1]], [[0, 1, 0], [0, 1, 1]]],
+                [[[1, 0, 0], [1, 0, 1]], [[1, 1, 0], [1, 1, 1]]],
+            ],
+            dtype=np.float32,
+        ),
+        zcorn=np.array([[[[0, 0, 0, 0, 1, 1, 1, 1]]]], dtype=np.float32),
+    )
+    assert g.point_in_cell((0.5, 0.5, 0.5), 0, 0, 0)
+    assert g.point_in_cell([(0.5, 0.5, 0.5), (0.25, 0.25, 0.25)], 0, 0, 0).shape == (2,)
