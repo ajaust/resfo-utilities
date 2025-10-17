@@ -308,3 +308,5 @@ def test_that_we_can_read_the_eightcells_grid_from_the_simulator(
         origin=approx((0.01, 0.01)),
         x_axis=approx((1.01, 0.01)),
     )
+
+    assert grid.point_in_cell((25, 25, 25), 0, 0, 0)

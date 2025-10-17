@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from numpy import typing as npt
 import numpy as np
 import resfo
+import trimesh
 
 
 class InvalidEgridFileError(ValueError):
@@ -119,6 +120,62 @@ class CornerpointGrid:
                 f" grid dimensions {dims} in {filename}"
             ) from err
         return cls(coord, zcorn, map_axes)
+
+    def point_in_cell(
+        self,
+        points: npt.ArrayLike,
+        i: int,
+        j: int,
+        k: int,
+    ) -> npt.NDArray[np.bool_]:
+        """Whether the points (x,y,z) is in the cell at (i,j,k).
+
+        Param:
+            points: x,y,z triple or array of x,y,z triples to be tested for containment.
+
+        Returns:
+            Array of boolean values for each triplet describing whether
+            it is contained in the cell.
+        """
+        points = np.asarray(points)
+        if len(points.shape) == 1:
+            points = points[np.newaxis, :]
+        pillar_vertices = np.concatenate(
+            [
+                self.coord[i, j, :],
+                self.coord[i, j + 1, :],
+                self.coord[i + 1, j, :],
+                self.coord[i + 1, j + 1, :],
+            ]
+        )
+        top = pillar_vertices[::2]
+        bot = pillar_vertices[1::2]
+        top_z = top[:, 2]
+        bot_z = bot[:, 2]
+
+        def twice(a: npt.NDArray[Any]) -> npt.NDArray[Any]:
+            return np.concatenate([a, a])
+
+        t = (self.zcorn[i, j, k] - twice(top_z)) / twice(bot_z - top_z)
+        return trimesh.Trimesh(
+            vertices=twice(top) + t[:, np.newaxis] * twice(bot - top),
+            faces=np.array(
+                [
+                    [0, 1, 2],
+                    [1, 2, 3],
+                    [0, 1, 5],
+                    [0, 4, 5],
+                    [0, 2, 6],
+                    [0, 4, 6],
+                    [4, 6, 5],
+                    [5, 6, 7],
+                    [1, 3, 7],
+                    [1, 5, 7],
+                    [2, 3, 7],
+                    [2, 3, 6],
+                ]
+            ),
+        ).contains(points)
 
     def _pillars_z_plane_intersection(self, z: np.float32) -> npt.NDArray[np.float32]:
         shape = self.coord.shape
