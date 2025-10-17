@@ -122,16 +122,14 @@ class CornerpointGrid:
         return cls(coord, zcorn, map_axes)
 
     def point_in_cell(
-        self,
-        points: npt.ArrayLike,
-        i: int,
-        j: int,
-        k: int,
+        self, points: npt.ArrayLike, i: int, j: int, k: int, tolerance: float = 1e-6
     ) -> npt.NDArray[np.bool_]:
         """Whether the points (x,y,z) is in the cell at (i,j,k).
 
         Param:
             points: x,y,z triple or array of x,y,z triples to be tested for containment.
+            tolerance: The minimum distance for points near the boundary to decide
+                containment.
 
         Returns:
             Array of boolean values for each triplet describing whether
@@ -157,7 +155,7 @@ class CornerpointGrid:
             return np.concatenate([a, a])
 
         t = (self.zcorn[i, j, k] - twice(top_z)) / twice(bot_z - top_z)
-        return trimesh.Trimesh(
+        mesh = trimesh.Trimesh(
             vertices=twice(top) + t[:, np.newaxis] * twice(bot - top),
             faces=np.array(
                 [
@@ -175,7 +173,8 @@ class CornerpointGrid:
                     [2, 3, 6],
                 ]
             ),
-        ).contains(points)
+        )
+        return mesh.contains(points) | (mesh.nearest.on_surface(points)[1] < tolerance)
 
     def _pillars_z_plane_intersection(self, z: np.float32) -> npt.NDArray[np.float32]:
         shape = self.coord.shape

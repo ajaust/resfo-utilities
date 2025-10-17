@@ -244,3 +244,37 @@ def test_that_interior_points_are_in_the_cell(unit_cell_grid):
     assert unit_cell_grid.point_in_cell(
         [(0.5, 0.5, 0.5), (0.25, 0.25, 0.25)], 0, 0, 0
     ).tolist() == [True, True]
+
+
+def test_that_points_on_corners_are_in_the_cell(unit_cell_grid):
+    assert unit_cell_grid.point_in_cell(
+        [
+            (0.0, 0.0, 0.0),
+            (1.0, 0.0, 0.0),
+            (0.0, 1.0, 0.0),
+            (1.0, 1.0, 0.0),
+            (0.0, 0.0, 1.0),
+            (1.0, 0.0, 1.0),
+            (0.0, 1.0, 1.0),
+            (1.0, 1.0, 1.0),
+        ],
+        0,
+        0,
+        0,
+    ).all()
+
+
+def test_that_points_on_faces_are_in_the_cell(unit_cell_grid):
+    assert unit_cell_grid.point_in_cell(
+        [
+            (0.0, 0.5, 0.5),
+            (1.0, 0.5, 0.5),
+            (0.5, 0.0, 0.5),
+            (0.5, 1.0, 0.5),
+            (0.5, 0.5, 0.0),
+            (0.5, 0.5, 1.0),
+        ],
+        0,
+        0,
+        0,
+    ).all()
