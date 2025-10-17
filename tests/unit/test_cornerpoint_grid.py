@@ -169,7 +169,7 @@ def test_that_read_egrid_fetches_the_geometry_from_the_global_grid_in_the_file(
     ]
 
 
-def test_that_get_xy_meshgrid_at_z_returns_meshgrid():
+def test_that_pillars_z_plane_intersection_returns_meshgrid():
     coord = np.array(
         [
             [
@@ -179,10 +179,12 @@ def test_that_get_xy_meshgrid_at_z_returns_meshgrid():
         ]
     )
     grid = CornerpointGrid(coord, None, None)
-    assert grid.get_xy_meshgrid_at_z(50.0).tolist() == [[[0.5, 5.0], [15.0, 25.0]]]
+    assert grid._pillars_z_plane_intersection(50.0).tolist() == [
+        [[0.5, 5.0], [15.0, 25.0]]
+    ]
 
 
-def test_that_get_xy_meshgrid_at_z_keeps_same_shape_as_coord_in_i_j_dimensions():
+def test_that_pillars_z_plane_intersection_keeps_same_shape_as_coord_in_i_j_dimensions():
     coord = np.array(
         [
             [
@@ -203,7 +205,7 @@ def test_that_get_xy_meshgrid_at_z_keeps_same_shape_as_coord_in_i_j_dimensions()
         ]
     )
     grid = CornerpointGrid(coord, None, None)
-    assert grid.get_xy_meshgrid_at_z(50.0).tolist() == [
+    assert grid._pillars_z_plane_intersection(50.0).tolist() == [
         [
             [0.0, 1.0],
             [2.0, 3.0],

@@ -120,7 +120,7 @@ class CornerpointGrid:
             ) from err
         return cls(coord, zcorn, map_axes)
 
-    def get_xy_meshgrid_at_z(self: Self, z: np.float32) -> npt.NDArray[np.float32]:
+    def _pillars_z_plane_intersection(self, z: np.float32) -> npt.NDArray[np.float32]:
         shape = self.coord.shape
         coord = self.coord.reshape(shape[0] * shape[1], shape[2] * shape[3])
         x1, y1, z1, x2, y2, z2 = coord.T
