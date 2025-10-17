@@ -77,7 +77,7 @@ def eightcells(request, simulator_cmd: list[str], tmp_path: Path) -> None:
             0.1   0.2   0.3     0.4   0.5 100.6
            50.7   0.8   0.9    51.1   1.2 101.3
           101.4   1.5   1.6   101.7   1.8 101.9
-            2.0  52.1  52.3     2.4  52.5 102.6
+            2.0  52.1   2.3     2.4  52.5 102.6
            52.7  52.8   2.9    53.0  53.1 103.2
           103.3  53.4   3.5   103.6  53.7 103.8
             3.9 104.0   4.1     4.2 104.3 104.4
@@ -251,7 +251,7 @@ def test_that_we_can_read_the_eightcells_grid_from_the_simulator(
         approx([101.7, 1.8, 101.9]),
     ]
     assert grid.coord[0, 1].tolist() == [
-        approx([2.0, 52.1, 52.3]),
+        approx([2.0, 52.1, 2.3]),
         approx([2.4, 52.5, 102.6]),
     ]
     assert grid.coord[1, 1].tolist() == [
