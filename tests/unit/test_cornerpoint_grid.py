@@ -224,8 +224,10 @@ def test_that_pillars_z_plane_intersection_keeps_same_shape_as_coord_in_i_j_dime
     ]
 
 
-def test_that_interior_points_are_in_the_cell():
-    g = CornerpointGrid(
+@pytest.fixture
+def unit_cell_grid():
+    """A Corner point grid which just contains the unit cube as a cell"""
+    return CornerpointGrid(
         coord=np.array(
             [
                 [[[0, 0, 0], [0, 0, 1]], [[0, 1, 0], [0, 1, 1]]],
@@ -235,5 +237,10 @@ def test_that_interior_points_are_in_the_cell():
         ),
         zcorn=np.array([[[[0, 0, 0, 0, 1, 1, 1, 1]]]], dtype=np.float32),
     )
-    assert g.point_in_cell((0.5, 0.5, 0.5), 0, 0, 0)
-    assert g.point_in_cell([(0.5, 0.5, 0.5), (0.25, 0.25, 0.25)], 0, 0, 0).shape == (2,)
+
+
+def test_that_interior_points_are_in_the_cell(unit_cell_grid):
+    assert unit_cell_grid.point_in_cell((0.5, 0.5, 0.5), 0, 0, 0)
+    assert unit_cell_grid.point_in_cell(
+        [(0.5, 0.5, 0.5), (0.25, 0.25, 0.25)], 0, 0, 0
+    ).shape == (2,)
