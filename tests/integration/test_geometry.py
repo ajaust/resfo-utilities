@@ -1,7 +1,13 @@
-from resfo_utilities._geometry import point_in_hexahedron
+from resfo_utilities._geometry import point_in_hexahedron, point_in_polygon
 from hypothesis import given
 import hypothesis.strategies as st
 
+unit_square = [
+    [0.0, 0.0],
+    [0.0, 1.0],
+    [1.0, 1.0],
+    [1.0, 0.0],
+]
 unit_cube = [
     [0.0] * 3,
     [0.0, 0.0, 1.0],
@@ -57,3 +63,8 @@ def test_that_quad_can_be_given_in_cw_order():
 
 def test_that_points_on_the_boundary_are_considered_inside_the_hexahedron():
     assert point_in_hexahedron(unit_cube, [1.0] * 3, unit_quads)
+
+
+@given(st.tuples(*([unit_coordinates] * 2)))
+def test_that_unit_interval_coordinates_are_inside_the_unit_square(point):
+    assert point_in_polygon(unit_square, point)
