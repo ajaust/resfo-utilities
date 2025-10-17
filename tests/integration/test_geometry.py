@@ -29,6 +29,10 @@ unit_quads = [
 
 
 unit_coordinates = st.floats(min_value=0.0, max_value=1.0)
+outside_unit_coordinates = st.one_of(
+    st.floats(max_value=0.0, exclude_max=True),
+    st.floats(min_value=1.0, exclude_min=True),
+)
 
 
 @given(st.tuples(*([unit_coordinates] * 3)))
@@ -68,3 +72,8 @@ def test_that_points_on_the_boundary_are_considered_inside_the_hexahedron():
 @given(st.tuples(*([unit_coordinates] * 2)))
 def test_that_unit_interval_coordinates_are_inside_the_unit_square(point):
     assert point_in_polygon(unit_square, point)
+
+
+@given(st.tuples(*([outside_unit_coordinates] * 2)))
+def test_that_coordinates_outside_unit_interval_are_not_inside_the_unit_square(point):
+    assert not point_in_polygon(unit_square, point)
