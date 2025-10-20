@@ -303,7 +303,9 @@ def test_that_transform_points_translates_by_origin():
     )
 
 
-coordinates = st.floats(allow_nan=False, allow_infinity=False, width=32)
+coordinates = st.floats(
+    allow_nan=False, allow_infinity=False, min_value=-1.0e9, max_value=1.0e9, width=32
+)
 
 
 @st.composite
@@ -324,7 +326,7 @@ def regular_grids(draw):
     bot_depth = top_depth + height
     coord = np.zeros((ni + 1, nj + 1, 2, 3), dtype=np.float32)
     zcorn = np.zeros((ni, nj, nk, 8), dtype=np.float32)
-    for i, j in product(range(ni), range(nj)):
+    for i, j in product(range(ni + 1), range(nj + 1)):
         coord[i, j, 0] = [i, j, top_depth]
         coord[i, j, 1] = [i, j, bot_depth]
     for i, j, k in product(range(ni), range(nj), range(nk)):
@@ -342,3 +344,26 @@ def test_that_found_cell_contains_point(grid, point):
         )
     else:
         assert grid.point_in_cell(point, *cell)
+
+
+def test_that_map_coordinates_parameter_sets_the_coordinate_system_for_points():
+    # unit cell grid with map axes
+    # translating origin to 100, 100
+    grid = CornerpointGrid(
+        coord=np.array(
+            [
+                [[[0, 0, 0], [0, 0, 1]], [[0, 1, 0], [0, 1, 1]]],
+                [[[1, 0, 0], [1, 0, 1]], [[1, 1, 0], [1, 1, 1]]],
+            ],
+            dtype=np.float32,
+        ),
+        zcorn=np.array([[[[0, 0, 0, 0, 1, 1, 1, 1]]]], dtype=np.float32),
+        map_axes=MapAxes((100.0, 101.0), (100.0, 100.0), (101.0, 100.0)),
+    )
+
+    # A map contained in cell 0,0,0
+    point = np.array([[100.5, 100.5, 0.5]], dtype=np.float32)
+    # By default points are in the map coordinate system
+    assert grid.find_cell_containing_point(point) == [(0, 0, 0)]
+
+    assert grid.find_cell_containing_point(point, map_coordinates=False) == [None]

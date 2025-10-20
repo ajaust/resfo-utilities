@@ -28,9 +28,10 @@ class MapAxes:
         x_unit = (self.x_axis[0] - self.origin[0], self.x_axis[1] - self.origin[1])
         y_unit = (self.y_axis[0] - self.origin[0], self.y_axis[1] - self.origin[1])
         norm = 1.0 / (x_unit[0] * y_unit[1] - x_unit[1] * y_unit[0])
-        points[:, 0] = (tx * y_unit[1] - ty * y_unit[0]) * norm
-        points[:, 1] = (-tx * x_unit[1] + ty * x_unit[0]) * norm
-        return points
+        new_points = points.copy()
+        new_points[:, 0] = (tx * y_unit[1] - ty * y_unit[0]) * norm
+        new_points[:, 1] = (-tx * x_unit[1] + ty * x_unit[0]) * norm
+        return new_points
 
 
 @dataclass
@@ -137,13 +138,15 @@ class CornerpointGrid:
         return cls(coord, zcorn, map_axes)
 
     def find_cell_containing_point(
-        self, points: npt.ArrayLike
+        self, points: npt.ArrayLike, map_coordinates: bool = True
     ) -> list[tuple[float, float, float] | None]:
         points = np.asarray(points)
         result: list[tuple[float, float, float] | None] = []
+        if map_coordinates and self.map_axes is not None:
+            points = self.map_axes.transform_map_points(points)
         for p in points:
             for i, j, k in product(*map(range, self.zcorn.shape[0:3])):
-                if self.point_in_cell(p, i, j, k):
+                if self.point_in_cell(p, i, j, k, map_coordinates=False):
                     result.append((i, j, k))
                     break
             else:
@@ -151,7 +154,13 @@ class CornerpointGrid:
         return result
 
     def point_in_cell(
-        self, points: npt.ArrayLike, i: int, j: int, k: int, tolerance: float = 1e-6
+        self,
+        points: npt.ArrayLike,
+        i: int,
+        j: int,
+        k: int,
+        tolerance: float = 1e-6,
+        map_coordinates: bool = True,
     ) -> npt.NDArray[np.bool_]:
         """Whether the points (x,y,z) is in the cell at (i,j,k).
 
@@ -159,6 +168,8 @@ class CornerpointGrid:
             points: x,y,z triple or array of x,y,z triples to be tested for containment.
             tolerance: The minimum distance for points near the boundary to decide
                 containment.
+            map_coordinates: Whether the given points are in the mapaxes coordinate system,
+                defaults to true.
 
         Returns:
             Array of boolean values for each triplet describing whether
@@ -167,6 +178,8 @@ class CornerpointGrid:
         points = np.asarray(points)
         if len(points.shape) == 1:
             points = points[np.newaxis, :]
+        if map_coordinates and self.map_axes is not None:
+            points = self.map_axes.transform_map_points(points)
         pillar_vertices = np.concatenate(
             [
                 self.coord[i, j, :],
