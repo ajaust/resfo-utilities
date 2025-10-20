@@ -6,7 +6,7 @@ import numpy as np
 import resfo
 import trimesh
 from itertools import product
-from ._geometry import point_in_polygon
+from matplotlib.path import Path
 
 
 class InvalidEgridFileError(ValueError):
@@ -152,15 +152,14 @@ class CornerpointGrid:
         for p in points:
             mesh = self._pillars_z_plane_intersection(p[2])
             for i, j in product(*map(range, self.zcorn.shape[0:2])):
-                if point_in_polygon(
+                if Path(
                     [
                         mesh[i, j],
                         mesh[i + 1, j],
                         mesh[i + 1, j + 1],
                         mesh[i, j + 1],
-                    ],
-                    p[0:2],
-                ):
+                    ]
+                ).contains_points([p[0:2]]):
                     for k in range(self.zcorn.shape[2]):
                         zcorn = self.zcorn[i, j, k]
                         max_z, min_z = zcorn.max(), zcorn.min()
