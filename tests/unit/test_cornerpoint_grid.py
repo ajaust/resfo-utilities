@@ -4,6 +4,9 @@ import pytest
 from io import BytesIO
 import numpy as np
 from numpy.testing import assert_allclose
+from hypothesis import given
+import hypothesis.strategies as st
+from itertools import product
 
 
 def write_to_buffer(file_contents):
@@ -298,3 +301,44 @@ def test_that_transform_points_translates_by_origin():
         ),
         [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 1.0]],
     )
+
+
+coordinates = st.floats(allow_nan=False, allow_infinity=False, width=32)
+
+
+@st.composite
+def regular_grids(draw):
+    ni, nj, nk = draw(st.tuples(*([st.integers(min_value=0, max_value=10)] * 3)))
+    height = draw(
+        st.floats(min_value=16.0, allow_nan=False, allow_infinity=False, width=32)
+    )
+    top_depth = draw(
+        st.floats(
+            min_value=0.0,
+            max_value=1000.0,
+            allow_nan=False,
+            allow_infinity=False,
+            width=32,
+        )
+    )
+    bot_depth = top_depth + height
+    coord = np.zeros((ni + 1, nj + 1, 2, 3), dtype=np.float32)
+    zcorn = np.zeros((ni, nj, nk, 8), dtype=np.float32)
+    for i, j in product(range(ni), range(nj)):
+        coord[i, j, 0] = [i, j, top_depth]
+        coord[i, j, 1] = [i, j, bot_depth]
+    for i, j, k in product(range(ni), range(nj), range(nk)):
+        zcorn[i, j, k] = [height * (k // nk)] * 4 + [height * ((k + 1) // nk)] * 4
+    return CornerpointGrid(coord, zcorn)
+
+
+@given(grid=regular_grids(), point=st.tuples(coordinates, coordinates, coordinates))
+def test_that_found_cell_contains_point(grid, point):
+    (cell,) = grid.find_cell_containing_point(np.array([point], dtype=np.float32))
+    if cell is None:
+        assert not any(
+            grid.point_in_cell(point, i, j, k)
+            for i, j, k in product(*map(range, grid.zcorn.shape[0:3]))
+        )
+    else:
+        assert grid.point_in_cell(point, *cell)

@@ -5,6 +5,7 @@ from numpy import typing as npt
 import numpy as np
 import resfo
 import trimesh
+from itertools import product
 
 
 class InvalidEgridFileError(ValueError):
@@ -134,6 +135,20 @@ class CornerpointGrid:
                 f" grid dimensions {dims} in {filename}"
             ) from err
         return cls(coord, zcorn, map_axes)
+
+    def find_cell_containing_point(
+        self, points: npt.ArrayLike
+    ) -> list[tuple[float, float, float] | None]:
+        points = np.asarray(points)
+        result: list[tuple[float, float, float] | None] = []
+        for p in points:
+            for i, j, k in product(*map(range, self.zcorn.shape[0:3])):
+                if self.point_in_cell(p, i, j, k):
+                    result.append((i, j, k))
+                    break
+            else:
+                result.append(None)
+        return result
 
     def point_in_cell(
         self, points: npt.ArrayLike, i: int, j: int, k: int, tolerance: float = 1e-6
