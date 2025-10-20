@@ -45,6 +45,7 @@ dev = [
     "hypothesis",
     "pre-commit",
     "mypy",
+    "types-shapely",
 ]
 
 [tool.setuptools_scm]
