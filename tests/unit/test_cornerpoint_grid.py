@@ -339,7 +339,7 @@ def test_that_found_cell_contains_point(grid, point):
     (cell,) = grid.find_cell_containing_point(np.array([point], dtype=np.float32))
     if cell is None:
         assert not any(
-            grid.point_in_cell(point, i, j, k)
+            grid.point_in_cell(point, i, j, k, tolerance=0)
             for i, j, k in product(*map(range, grid.zcorn.shape[0:3]))
         )
     else:

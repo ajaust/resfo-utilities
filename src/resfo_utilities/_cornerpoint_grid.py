@@ -6,6 +6,7 @@ import numpy as np
 import resfo
 import trimesh
 from itertools import product
+from ._geometry import point_in_polygon
 
 
 class InvalidEgridFileError(ValueError):
@@ -147,13 +148,32 @@ class CornerpointGrid:
         result: list[tuple[float, float, float] | None] = []
         if map_coordinates and self.map_axes is not None:
             points = self.map_axes.transform_map_points(points)
+        found = False
         for p in points:
-            for i, j, k in product(*map(range, self.zcorn.shape[0:3])):
-                if self.point_in_cell(p, i, j, k, map_coordinates=False):
-                    result.append((i, j, k))
+            mesh = self._pillars_z_plane_intersection(p[2])
+            for i, j in product(*map(range, self.zcorn.shape[0:2])):
+                if point_in_polygon(
+                    [
+                        mesh[i, j],
+                        mesh[i + 1, j],
+                        mesh[i + 1, j + 1],
+                        mesh[i, j + 1],
+                    ],
+                    p[0:2],
+                ):
+                    for k in range(self.zcorn.shape[2]):
+                        zcorn = self.zcorn[i, j, k]
+                        max_z, min_z = zcorn.max(), zcorn.min()
+                        if min_z <= p[2] <= max_z and self.point_in_cell(
+                            p, i, j, k, map_coordinates=False
+                        ):
+                            result.append((i, j, k))
+                            found = True
+                            break
                     break
-            else:
+            if not found:
                 result.append(None)
+
         return result
 
     def point_in_cell(
