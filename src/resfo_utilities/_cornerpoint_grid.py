@@ -17,6 +17,20 @@ class MapAxes:
     origin: tuple[np.float32, np.float32]
     x_axis: tuple[np.float32, np.float32]
 
+    def transform_map_points(
+        self, points: npt.NDArray[np.float32]
+    ) -> npt.NDArray[np.float32]:
+        """Transforms points from map coordinates to grid coordinates."""
+        translated = points - np.array([*self.origin, 0])
+        tx = translated[:, 0]
+        ty = translated[:, 1]
+        x_unit = (self.x_axis[0] - self.origin[0], self.x_axis[1] - self.origin[1])
+        y_unit = (self.y_axis[0] - self.origin[0], self.y_axis[1] - self.origin[1])
+        norm = 1.0 / (x_unit[0] * y_unit[1] - x_unit[1] * y_unit[0])
+        points[:, 0] = (tx * y_unit[1] - ty * y_unit[0]) * norm
+        points[:, 1] = (-tx * x_unit[1] + ty * x_unit[0]) * norm
+        return points
+
 
 @dataclass
 class CornerpointGrid:

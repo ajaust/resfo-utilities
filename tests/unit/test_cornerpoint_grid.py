@@ -1,8 +1,9 @@
-from resfo_utilities import CornerpointGrid, InvalidEgridFileError
+from resfo_utilities import CornerpointGrid, InvalidEgridFileError, MapAxes
 import resfo
 import pytest
 from io import BytesIO
 import numpy as np
+from numpy.testing import assert_allclose
 
 
 def write_to_buffer(file_contents):
@@ -278,3 +279,22 @@ def test_that_points_on_faces_are_in_the_cell(unit_cell_grid):
         0,
         0,
     ).all()
+
+
+def test_that_transform_points_scales_by_map_axes():
+    assert MapAxes((0.0, 10.0), (0.0, 0.0), (1.0, 0.0)).transform_map_points(
+        np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 1.0]])
+    ).tolist() == [[1.0, 0.0, 0.0], [0.0, 0.1, 0.0], [1.0, 0.1, 1.0]]
+
+    assert MapAxes((0.0, 1.0), (0.0, 0.0), (10.0, 0.0)).transform_map_points(
+        np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 1.0]])
+    ).tolist() == [[0.1, 0.0, 0.0], [0.0, 1.0, 0.0], [0.1, 1.0, 1.0]]
+
+
+def test_that_transform_points_translates_by_origin():
+    assert_allclose(
+        MapAxes((100.0, 51.0), (100.0, 50.0), (101.0, 50.0)).transform_map_points(
+            np.array([[101.0, 50.0, 0.0], [100.0, 51.0, 0.0], [101.0, 51.0, 1.0]])
+        ),
+        [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 1.0]],
+    )
