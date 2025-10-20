@@ -28,10 +28,13 @@ class MapAxes:
         x_unit = (self.x_axis[0] - self.origin[0], self.x_axis[1] - self.origin[1])
         y_unit = (self.y_axis[0] - self.origin[0], self.y_axis[1] - self.origin[1])
         norm = 1.0 / (x_unit[0] * y_unit[1] - x_unit[1] * y_unit[0])
-        new_points = points.copy()
-        new_points[:, 0] = (tx * y_unit[1] - ty * y_unit[0]) * norm
-        new_points[:, 1] = (-tx * x_unit[1] + ty * x_unit[0]) * norm
-        return new_points
+        return np.column_stack(
+            [
+                (tx * y_unit[1] - ty * y_unit[0]) * norm,
+                (-tx * x_unit[1] + ty * x_unit[0]) * norm,
+                translated[:, 2],
+            ]
+        )
 
 
 @dataclass
