@@ -26,8 +26,12 @@ class MapAxes:
         translated = points - np.array([*self.origin, 0])
         tx = translated[:, 0]
         ty = translated[:, 1]
-        x_unit = (self.x_axis[0] - self.origin[0], self.x_axis[1] - self.origin[1])
-        y_unit = (self.y_axis[0] - self.origin[0], self.y_axis[1] - self.origin[1])
+        x_vec = (self.x_axis[0] - self.origin[0], self.x_axis[1] - self.origin[1])
+        y_vec = (self.y_axis[0] - self.origin[0], self.y_axis[1] - self.origin[1])
+        x_norm = np.sqrt(x_vec[0] ** 2 + x_vec[1] ** 2)
+        x_unit = (x_vec[0] / x_norm, x_vec[1] / x_norm)
+        y_norm = np.sqrt(y_vec[0] ** 2 + y_vec[1] ** 2)
+        y_unit = (y_vec[0] / y_norm, y_vec[1] / y_norm)
         norm = 1.0 / (x_unit[0] * y_unit[1] - x_unit[1] * y_unit[0])
         return np.column_stack(
             [

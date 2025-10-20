@@ -284,14 +284,14 @@ def test_that_points_on_faces_are_in_the_cell(unit_cell_grid):
     ).all()
 
 
-def test_that_transform_points_scales_by_map_axes():
+def test_that_transform_points_does_not_scale_by_map_axes():
     assert MapAxes((0.0, 10.0), (0.0, 0.0), (1.0, 0.0)).transform_map_points(
         np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 1.0]])
-    ).tolist() == [[1.0, 0.0, 0.0], [0.0, 0.1, 0.0], [1.0, 0.1, 1.0]]
+    ).tolist() == [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 1.0]]
 
     assert MapAxes((0.0, 1.0), (0.0, 0.0), (10.0, 0.0)).transform_map_points(
         np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 1.0]])
-    ).tolist() == [[0.1, 0.0, 0.0], [0.0, 1.0, 0.0], [0.1, 1.0, 1.0]]
+    ).tolist() == [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 1.0]]
 
 
 def test_that_transform_points_translates_by_origin():
