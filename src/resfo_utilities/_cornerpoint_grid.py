@@ -1,5 +1,5 @@
 import os
-from typing import Self, Any, IO, TypeVar
+from typing import Self, Any, IO, TypeVar, Iterator
 from dataclasses import dataclass
 from numpy import typing as npt
 import numpy as np
@@ -153,9 +153,17 @@ class CornerpointGrid:
         if map_coordinates and self.map_axes is not None:
             points = self.map_axes.transform_map_points(points)
         found = False
+        prev_ij = None
+        iterator: Iterator[tuple[int, ...]] = product(
+            *map(range, self.zcorn.shape[0:2])
+        )
         for p in points:
             mesh = self._pillars_z_plane_intersection(p[2])
-            for i, j in product(*map(range, self.zcorn.shape[0:2])):
+            # The use case that the previous point is close to the
+            # next point is very common, so we optimize for that
+            if prev_ij is not None:
+                iterator = _neighbours_in_grid(*prev_ij, *self.zcorn.shape[0:2])
+            for i, j in iterator:
                 if Path(
                     [
                         mesh[i, j],
@@ -170,6 +178,7 @@ class CornerpointGrid:
                         if min_z <= p[2] <= max_z and self.point_in_cell(
                             p, i, j, k, map_coordinates=False
                         ):
+                            prev_ij = (i, j)
                             result.append((i, j, k))
                             found = True
                             break
@@ -257,3 +266,64 @@ class CornerpointGrid:
         # Result: (x, y) coordinates for all lines at z
         result = np.column_stack((x, y))
         return result.reshape(shape[0], shape[1], 2)
+
+
+def _neighbours_in_grid(
+    start_i: int, start_j: int, nrows: int, ncols: int
+) -> Iterator[tuple[int, int]]:
+    """
+    Yields (i, j) coordinates of a grid starting at (start_i, start_j),
+    expanding outward in a clockwise spiral.
+
+    >>> list(_neighbours_in_grid(0, 0, 1, 1))
+    [(0, 0)]
+    >>> list(_neighbours_in_grid(0, 0, 2, 2))
+    [(0, 0), (0, 1), (1, 1), (1, 0)]
+    >>> list(_neighbours_in_grid(0, 0, 2, 2))
+    [(0, 0), (0, 1), (1, 1), (1, 0)]
+    >>> list(_neighbours_in_grid(1, 1, 3, 3))
+    [(1, 1), (0, 0), (0, 1), (0, 2), (1, 2), (2, 2), (2, 1), (2, 0), (1, 0)]
+    """
+    yield (start_i, start_j)
+
+    # distance from the start point
+    radius = 1
+
+    while True:
+        any_yielded = False
+        top = start_i - radius
+        bottom = start_i + radius
+        left = start_j - radius
+        right = start_j + radius
+
+        # top row (left → right)
+        for j in range(left, right + 1):
+            i = top
+            if 0 <= i < nrows and 0 <= j < ncols:
+                yield (i, j)
+                any_yielded = True
+
+        # right column (top+1 → bottom)
+        for i in range(top + 1, bottom + 1):
+            j = right
+            if 0 <= i < nrows and 0 <= j < ncols:
+                yield (i, j)
+                any_yielded = True
+
+        # bottom row (right-1 → left)
+        for j in range(right - 1, left - 1, -1):
+            i = bottom
+            if 0 <= i < nrows and 0 <= j < ncols:
+                yield (i, j)
+                any_yielded = True
+
+        # left column (bottom-1 → top+1)
+        for i in range(bottom - 1, top, -1):
+            j = left
+            if 0 <= i < nrows and 0 <= j < ncols:
+                yield (i, j)
+                any_yielded = True
+
+        if not any_yielded:
+            break  # we went beyond grid bounds
+        radius += 1

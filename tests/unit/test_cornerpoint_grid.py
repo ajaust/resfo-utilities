@@ -1,4 +1,5 @@
 from resfo_utilities import CornerpointGrid, InvalidEgridFileError, MapAxes
+from resfo_utilities._cornerpoint_grid import _neighbours_in_grid
 import resfo
 import pytest
 from io import BytesIO
@@ -403,3 +404,23 @@ def test_that_point_in_cell_correctly_orders_zcorn_against_coord():
     # By default points are in the map coordinate system
     assert grid.point_in_cell(point, 0, 0, 0)
     assert grid.find_cell_containing_point(point) == [(0, 0, 0)]
+
+
+grid_sizes = st.integers(min_value=1, max_value=100)
+
+
+@given(st.data())
+def test_that_neighbours_in_grid_eventually_searches_all_cells(data):
+    nx, ny = data.draw(st.tuples(grid_sizes, grid_sizes))
+    i = data.draw(st.integers(min_value=0, max_value=nx - 1))
+    j = data.draw(st.integers(min_value=0, max_value=ny - 1))
+    assert set(_neighbours_in_grid(i, j, nx, ny)) == set(product(range(nx), range(ny)))
+
+
+@given(st.data())
+def test_that_neighbours_in_grid_searches_each_point_only_once(data):
+    nx, ny = data.draw(st.tuples(grid_sizes, grid_sizes))
+    i = data.draw(st.integers(min_value=0, max_value=nx - 1))
+    j = data.draw(st.integers(min_value=0, max_value=ny - 1))
+    neighbours = list(_neighbours_in_grid(i, j, nx, ny))
+    assert len(set(neighbours)) == len(neighbours)
