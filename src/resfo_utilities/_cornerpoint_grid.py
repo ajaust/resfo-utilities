@@ -214,8 +214,8 @@ class CornerpointGrid:
                 self.coord[i + 1, j + 1, :],
             ]
         )
-        top = pillar_vertices[::2]
-        bot = pillar_vertices[1::2]
+        top = pillar_vertices[::2][[0, 2, 1, 3]]
+        bot = pillar_vertices[1::2][[0, 2, 1, 3]]
         top_z = top[:, 2]
         bot_z = bot[:, 2]
 

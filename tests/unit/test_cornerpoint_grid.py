@@ -367,3 +367,39 @@ def test_that_map_coordinates_parameter_sets_the_coordinate_system_for_points():
     assert grid.find_cell_containing_point(point) == [(0, 0, 0)]
 
     assert grid.find_cell_containing_point(point, map_coordinates=False) == [None]
+
+
+def test_that_point_in_cell_correctly_orders_zcorn_against_coord():
+    """This is a regression test for a bug where point_in_cell
+    did not order coord points correctly against zcorn"""
+    grid = CornerpointGrid(
+        coord=np.array(
+            [
+                [
+                    [[581, 800, 675], [581, 800, 86]],
+                    [[581, 700, 683], [581, 700, 110]],
+                ],
+                [
+                    [[681, 800, 657], [681, 800, 48]],
+                    [[681, 700, 670], [681, 700, 68]],
+                ],
+            ],
+            dtype=np.float32,
+        ),
+        zcorn=np.array(
+            [
+                [
+                    [
+                        [729, 707, 733, 718, 735, 712, 738, 723],
+                    ]
+                ]
+            ],
+            dtype=np.float32,
+        ),
+    )
+
+    # A point contained in cell 0,0,0
+    point = np.array([[662, 752, 718]], dtype=np.float64)
+    # By default points are in the map coordinate system
+    assert grid.point_in_cell(point, 0, 0, 0)
+    assert grid.find_cell_containing_point(point) == [(0, 0, 0)]
