@@ -310,4 +310,6 @@ def test_that_we_can_read_the_eightcells_grid_from_the_simulator(
     )
 
     assert grid.point_in_cell((25, 25, 25), 0, 0, 0)
+    assert grid.find_cell_containing_point([(25, 25, 25)]) == [(0, 0, 0)]
+    assert grid.find_cell_containing_point([(200, 200, 200)]) == [None]
     assert not grid.point_in_cell((225, 225, 225), 0, 0, 0)

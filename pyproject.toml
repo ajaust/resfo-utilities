@@ -46,6 +46,7 @@ dev = [
     "pre-commit",
     "mypy",
     "types-shapely",
+    "pytest-benchmark",
 ]
 
 [tool.setuptools_scm]

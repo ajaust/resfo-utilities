@@ -164,18 +164,25 @@ class CornerpointGrid:
             if prev_ij is not None:
                 iterator = _neighbours_in_grid(*prev_ij, *self.zcorn.shape[0:2])
             for i, j in iterator:
-                if Path(
+                vertices = np.array(
                     [
                         mesh[i, j],
                         mesh[i + 1, j],
                         mesh[i + 1, j + 1],
                         mesh[i, j + 1],
-                    ]
-                ).contains_points([p[0:2]]):
+                    ],
+                    dtype=np.float32,
+                )
+                # Before performing the heavy point_in_cell calculations we first
+                # prune by checking that the point is inside the bounding box
+                if (
+                    vertices[:, 0].min() <= p[0] <= vertices[:, 0].max()
+                    and vertices[:, 1].min() <= p[1] <= vertices[:, 1].max()
+                    and Path(vertices).contains_points([p[0:2]])
+                ):
                     for k in range(self.zcorn.shape[2]):
                         zcorn = self.zcorn[i, j, k]
-                        max_z, min_z = zcorn.max(), zcorn.min()
-                        if min_z <= p[2] <= max_z and self.point_in_cell(
+                        if zcorn.min() <= p[2] <= zcorn.max() and self.point_in_cell(
                             p, i, j, k, map_coordinates=False
                         ):
                             prev_ij = (i, j)
