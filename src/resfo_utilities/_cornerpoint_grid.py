@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 from typing import Self, Any, IO, TypeVar
 from dataclasses import dataclass
@@ -53,11 +54,11 @@ class CornerpointGrid:
     For each i,j there is are four straight lines, defined by their end-points
     called a :term:`pillar`. The end-points form two surfaces, one
     for the top end-points and one for the bottom end points, which
-    are in the :attr:`.CornerpointGrid.coord` array.
+    are in the CornerpointGrid.coord array.
 
     For the cell at position i,j,k, its eight corner vertices are defined by
     giving the z values along the pillars at [(i,j), (i+1, j), (i, j+1), (i+1, j+1)] which
-    are in the :attr:`.CornerpointGrid.zcorn` array.
+    are in the CornerpointGrid.zcorn array.
 
 
     Attributes:
