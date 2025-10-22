@@ -17,6 +17,26 @@ class InvalidEgridFileError(ValueError):
 
 @dataclass
 class MapAxes:
+    """The axes of the map coordinate system.
+
+    Usually, a corner-point grid contains x,y values that
+    needs to be transformed into a map coordinate system
+    (which could be :term:`UTM-coordinates`). That coordinate
+    system is represented by MapAxes.
+
+    Note that regardless of the size of the axes, when transforming
+    from the grid coordinate system to the map coordinate system,
+    scaling is not applied.
+
+    Attributes:
+        y_axis:
+            A point along the map y axis
+        origin:
+            The origin of the map coordinate system
+        x_axis:
+            A point along the map x axis
+    """
+
     y_axis: tuple[np.float32, np.float32]
     origin: tuple[np.float32, np.float32]
     x_axis: tuple[np.float32, np.float32]
@@ -63,13 +83,18 @@ class CornerpointGrid:
 
     Attributes:
         coord:
-            A (ni+1, nj+1, 2, 3) array where coord[i,j,0] gives the top end point
-            of the
+            A (ni+1, nj+1, 2, 3) array where coord[i,j,0] is the top end point
+            of the i,j pillar and coord[i,j,1] is the corresponding bottom end point.
+        zcorn:
+            A (ni, nj, nk, 8) array where zcorn[i,j,k] is the z value of the 8 corners
+            of the cell at i,j,k.
 
         map_axes:
             Optionally each point is interpreted to be relative to some map
             coordinate system. Defaults to the unit coordinate system with
-            origo at (0,0).
+            origo at (0,0). The order of the corner z valus are as follows:
+            [TSW, TSE, TNW, TNE, BSW, BSE, BNW, BNE] where N(orth) means higher y,
+            E(east) means higer x, T(op) means lower z (when z is interpreted as depth).
 
     """
 
@@ -79,7 +104,25 @@ class CornerpointGrid:
 
     @classmethod
     def read_egrid(cls, file_like: str | os.PathLike[str] | IO[Any]) -> Self:
-        """Read a grid from an .EGRID or .FEGRID file"""
+        """Read the global grid from an .EGRID or .FEGRID file.
+
+        If the EGRID contains Local Grid Refinements or Coarsening Groups,
+        that is silently ignored and only the host grid is read.
+
+        Args:
+            file_like:
+                The EGRID file, could either be a filename, patlike or an opened
+                EGRID file. The function also handles formatted egrid files (.FEGRID).
+                Whether the file is formatted or not is determined by looking at the
+                extension a filepath is given and by whether the stream is a byte-stream
+                (unformatted) or a text-stream when an opened file is given.
+        Raises:
+            InvalidEgridFileError:
+                When the egrid file is not valid.
+            OSError:
+                If the given filepath cannot be opened
+
+        """
         coord = None
         dims = None
         zcorn = None
