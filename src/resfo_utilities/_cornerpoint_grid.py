@@ -371,9 +371,11 @@ class CornerpointGrid:
             points:
                 x,y,z triple or array of x,y,z triples to be tested for containment.
             tolerance:
-                The minimum distance for points near the boundary to decide containment.
+                The maximum distance to the cell boundary a point can have to
+                be considered to be contained in the cell.
             map_coordinates:
-                Whether the given points are in the mapaxes coordinate system, defaults to true.
+                Whether the given points are in the mapaxes coordinate system,
+                defaults to true.
 
         Returns:
             Array of boolean values for each triplet describing whether
