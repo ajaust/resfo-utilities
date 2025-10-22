@@ -297,7 +297,7 @@ class CornerpointGrid:
                 return x_dist + y_dist
 
             def __lt__(self, other: object) -> bool:
-                """Used to order elements in the search queue
+                """Used to order elements in the search queue.
 
                 The Quads are orderd by distance_from_bounds.
                 """
