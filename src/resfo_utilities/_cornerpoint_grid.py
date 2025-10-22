@@ -44,12 +44,40 @@ class MapAxes:
 
 @dataclass
 class CornerpointGrid:
+    """
+    A :term:`corner-point grid` is a tessellation of a 3D volumne where
+    each cell is a hexahedron.
+
+    Each cell is identified by a integer coordinate (i,j,k).
+    For each i,j there is are four straight lines, defined by their end-points
+    called a :term:`pillar`. The end-points form two surfaces, one
+    for the top end-points and one for the bottom end points, which
+    are in the :attr:`.CornerpointGrid.coord` array.
+
+    For the cell at position i,j,k, its eight corner vertices are defined by
+    giving the z values along the pillars at [(i,j), (i+1, j), (i, j+1), (i+1, j+1)] which
+    are in the :attr:`.CornerpointGrid.zcorn` array.
+
+
+    Attributes:
+        coord:
+            A (ni+1, nj+1, 2, 3) array where coord[i,j,0] gives the top end point
+            of the
+
+        map_axes:
+            Optionally each point is interpreted to be relative to some map
+            coordinate system. Defaults to the unit coordinate system with
+            origo at (0,0).
+
+    """
+
     coord: npt.NDArray[np.float32]
     zcorn: npt.NDArray[np.float32]
     map_axes: MapAxes | None = None
 
     @classmethod
     def read_egrid(cls, file_like: str | os.PathLike[str] | IO[Any]) -> Self:
+        """Read a grid from an .EGRID or .FEGRID file"""
         coord = None
         dims = None
         zcorn = None
@@ -148,6 +176,7 @@ class CornerpointGrid:
     def find_cell_containing_point(
         self, points: npt.ArrayLike, map_coordinates: bool = True
     ) -> list[tuple[float, float, float] | None]:
+        """Find a cell in the grid which contains the given point."""
         points = np.asarray(points)
         result: list[tuple[float, float, float] | None] = []
         if map_coordinates and self.map_axes is not None:
@@ -208,10 +237,8 @@ class CornerpointGrid:
 
         Param:
             points: x,y,z triple or array of x,y,z triples to be tested for containment.
-            tolerance: The minimum distance for points near the boundary to decide
-                containment.
-            map_coordinates: Whether the given points are in the mapaxes coordinate system,
-                defaults to true.
+            tolerance: The minimum distance for points near the boundary to decide containment.
+            map_coordinates: Whether the given points are in the mapaxes coordinate system, defaults to true.
 
         Returns:
             Array of boolean values for each triplet describing whether
