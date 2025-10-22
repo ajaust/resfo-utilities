@@ -9,12 +9,7 @@ flow](https://github.com/OPM/opm-simulators).
 Installation
 ============
 
-TBD
-
-Getting started
-===============
-
-TBD
+`pip install resfo-utilities`
 
 
 How to contribute
