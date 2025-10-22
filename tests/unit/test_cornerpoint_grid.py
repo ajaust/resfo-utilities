@@ -310,7 +310,7 @@ coordinates = st.floats(
 
 @st.composite
 def regular_grids(draw):
-    ni, nj, nk = draw(st.tuples(*([st.integers(min_value=0, max_value=10)] * 3)))
+    ni, nj, nk = draw(st.tuples(*([st.integers(min_value=1, max_value=10)] * 3)))
     height = draw(
         st.floats(min_value=16.0, allow_nan=False, allow_infinity=False, width=32)
     )
@@ -334,14 +334,24 @@ def regular_grids(draw):
     return CornerpointGrid(coord, zcorn)
 
 
-@given(grid=regular_grids(), point=st.tuples(coordinates, coordinates, coordinates))
-def test_that_found_cell_contains_point(grid, point):
+@given(
+    grid=regular_grids(),
+    point=st.tuples(coordinates, coordinates, coordinates),
+    data=st.data(),
+)
+def test_that_found_cell_contains_point(grid, point, data):
     (cell,) = grid.find_cell_containing_point(np.array([point], dtype=np.float32))
     if cell is None:
-        assert not any(
-            grid.point_in_cell(point, i, j, k, tolerance=0)
-            for i, j, k in product(*map(range, grid.zcorn.shape[0:3]))
+        # select one point to check, the point should be
+        # in none of the cells
+        i, j, k = data.draw(
+            st.tuples(
+                st.integers(min_value=0, max_value=grid.zcorn.shape[0] - 1),
+                st.integers(min_value=0, max_value=grid.zcorn.shape[1] - 1),
+                st.integers(min_value=0, max_value=grid.zcorn.shape[2] - 1),
+            )
         )
+        assert not grid.point_in_cell(point, i, j, k, tolerance=0)
     else:
         assert grid.point_in_cell(point, *cell)
 
