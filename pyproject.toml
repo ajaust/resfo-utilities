@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "resfo-utilities"
 description="A utility library for working with the output of reservoir simulators."
 readme = "README.md"
-requires-python = ">=3.11, <=3.14"
+requires-python = ">=3.11, <=3.13"
 classifiers=[
     "Development Status :: 1 - Planning",
     "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
