@@ -1,12 +1,13 @@
 import os
-from typing import Self, Any, IO, TypeVar, Iterator
+from typing import Self, Any, IO, TypeVar
 from dataclasses import dataclass
 from numpy import typing as npt
 import numpy as np
 import resfo
 import trimesh
-from itertools import product
 from matplotlib.path import Path
+import heapq
+from functools import cached_property
 
 
 class InvalidEgridFileError(ValueError):
@@ -181,36 +182,94 @@ class CornerpointGrid:
         result: list[tuple[float, float, float] | None] = []
         if map_coordinates and self.map_axes is not None:
             points = self.map_axes.transform_map_points(points)
+
+        # This algorithm will for each point p calculate the mesh surface that
+        # is the intersection of the pillars with the plane z=p[2]. Then it searches
+        # through the quad with a heuristical search that orders each neighbour by
+        # the points manhattan distance to the bounding box.
         found = False
-        prev_ij = None
-        iterator: Iterator[tuple[int, ...]] = product(
-            *map(range, self.zcorn.shape[0:2])
-        )
-        for p in points:
-            mesh = self._pillars_z_plane_intersection(p[2])
-            # The use case that the previous point is close to the
-            # next point is very common, so we optimize for that
-            if prev_ij is not None:
-                iterator = _neighbours_in_grid(*prev_ij, *self.zcorn.shape[0:2])
-            for i, j in iterator:
-                vertices = np.array(
+        # The use case that the previous point is close to the
+        # next point is very common, so we optimize for that.
+        prev_ij = None  # The i,j index the previous point was found at
+
+        @dataclass
+        class Quad:
+            """The quad at index i,j"""
+
+            mesh: npt.NDArray[np.float32]
+            i: int
+            j: int
+            p: npt.NDArray[np.float32]
+
+            @cached_property
+            def vertices(self) -> npt.NDArray[np.float32]:
+                return np.array(
                     [
-                        mesh[i, j],
-                        mesh[i + 1, j],
-                        mesh[i + 1, j + 1],
-                        mesh[i, j + 1],
+                        self.mesh[self.i, self.j],
+                        self.mesh[self.i + 1, self.j],
+                        self.mesh[self.i + 1, self.j + 1],
+                        self.mesh[self.i, self.j + 1],
                     ],
                     dtype=np.float32,
                 )
-                # Before performing the heavy point_in_cell calculations we first
-                # prune by checking that the point is inside the bounding box
-                if (
-                    vertices[:, 0].min() <= p[0] <= vertices[:, 0].max()
-                    and vertices[:, 1].min() <= p[1] <= vertices[:, 1].max()
-                    and Path(vertices).contains_points([p[0:2]])
+
+            @cached_property
+            def min_x(self) -> np.float32:
+                return self.vertices[:, 0].min()
+
+            @cached_property
+            def min_y(self) -> np.float32:
+                return self.vertices[:, 1].min()
+
+            @cached_property
+            def max_x(self) -> np.float32:
+                return self.vertices[:, 0].max()
+
+            @cached_property
+            def max_y(self) -> np.float32:
+                return self.vertices[:, 1].max()
+
+            @cached_property
+            def distance_from_bounds(self) -> np.float32:
+                """Manhattan distance from the point to the quad bounding box"""
+                x_dist = max(self.min_x - self.p[0], self.p[0] - self.max_x, 0)
+                y_dist = max(self.min_y - self.p[1], self.p[1] - self.max_y, 0)
+                return x_dist + y_dist
+
+            def __lt__(self, other: object) -> bool:
+                """Used to order elements in the search queue
+
+                The Quads are orderd by distance_from_bounds.
+                """
+                if not isinstance(other, Quad):
+                    return False
+                return bool(self.distance_from_bounds < other.distance_from_bounds)
+
+        if self.zcorn.shape[0] <= 0 or self.zcorn.shape[1] <= 0:
+            return [None] * len(points)
+
+        for p in points:
+            found = False
+            mesh = self._pillars_z_plane_intersection(p[2])
+            if prev_ij is None:
+                queue = [Quad(mesh, 0, 0, p)]
+            else:
+                queue = [Quad(mesh, *prev_ij, p)]
+            visited = set([(queue[0].i, queue[0].j)])
+            while queue:
+                node = heapq.heappop(queue)
+                vertices = node.vertices
+                i = node.i
+                j = node.j
+
+                # If the quad contains the point then search through each k index
+                # for that quad
+                if node.distance_from_bounds <= 0 and Path(vertices).contains_points(
+                    [p[0:2]]
                 ):
                     for k in range(self.zcorn.shape[2]):
                         zcorn = self.zcorn[i, j, k]
+                        # Prune by bounding box first then check whether point_in_cell
                         if zcorn.min() <= p[2] <= zcorn.max() and self.point_in_cell(
                             p, i, j, k, map_coordinates=False
                         ):
@@ -219,6 +278,19 @@ class CornerpointGrid:
                             found = True
                             break
                     break
+
+                # Add each neighbour to the queue if not visited
+                for di in (-1, 0, 1):
+                    ni = i + di
+                    if ni < 0 or ni >= self.zcorn.shape[0]:
+                        continue
+                    for dj in (-1, 0, 1):
+                        nj = j + dj
+                        if nj < 0 or nj >= self.zcorn.shape[1]:
+                            continue
+                        if (ni, nj) not in visited:
+                            heapq.heappush(queue, Quad(mesh, ni, nj, p))
+                            visited.add((ni, nj))
             if not found:
                 result.append(None)
 
@@ -300,64 +372,3 @@ class CornerpointGrid:
         # Result: (x, y) coordinates for all lines at z
         result = np.column_stack((x, y))
         return result.reshape(shape[0], shape[1], 2)
-
-
-def _neighbours_in_grid(
-    start_i: int, start_j: int, nrows: int, ncols: int
-) -> Iterator[tuple[int, int]]:
-    """
-    Yields (i, j) coordinates of a grid starting at (start_i, start_j),
-    expanding outward in a clockwise spiral.
-
-    >>> list(_neighbours_in_grid(0, 0, 1, 1))
-    [(0, 0)]
-    >>> list(_neighbours_in_grid(0, 0, 2, 2))
-    [(0, 0), (0, 1), (1, 1), (1, 0)]
-    >>> list(_neighbours_in_grid(0, 0, 2, 2))
-    [(0, 0), (0, 1), (1, 1), (1, 0)]
-    >>> list(_neighbours_in_grid(1, 1, 3, 3))
-    [(1, 1), (0, 0), (0, 1), (0, 2), (1, 2), (2, 2), (2, 1), (2, 0), (1, 0)]
-    """
-    yield (start_i, start_j)
-
-    # distance from the start point
-    radius = 1
-
-    while True:
-        any_yielded = False
-        top = start_i - radius
-        bottom = start_i + radius
-        left = start_j - radius
-        right = start_j + radius
-
-        # top row (left → right)
-        for j in range(left, right + 1):
-            i = top
-            if 0 <= i < nrows and 0 <= j < ncols:
-                yield (i, j)
-                any_yielded = True
-
-        # right column (top+1 → bottom)
-        for i in range(top + 1, bottom + 1):
-            j = right
-            if 0 <= i < nrows and 0 <= j < ncols:
-                yield (i, j)
-                any_yielded = True
-
-        # bottom row (right-1 → left)
-        for j in range(right - 1, left - 1, -1):
-            i = bottom
-            if 0 <= i < nrows and 0 <= j < ncols:
-                yield (i, j)
-                any_yielded = True
-
-        # left column (bottom-1 → top+1)
-        for i in range(bottom - 1, top, -1):
-            j = left
-            if 0 <= i < nrows and 0 <= j < ncols:
-                yield (i, j)
-                any_yielded = True
-
-        if not any_yielded:
-            break  # we went beyond grid bounds
-        radius += 1
