@@ -38,7 +38,7 @@ repos:
   - id: docs
     name: docs
     entry: uv
-    args: [run, --all-extras, sphinx-build, -W, -n, -E, docs/src, docs/output]
+    args: [run, --all-extras, sphinx-build, -W, -n, -E, docs/source, docs/output]
     language: system
     stages: [pre-push]
     pass_filenames: false
