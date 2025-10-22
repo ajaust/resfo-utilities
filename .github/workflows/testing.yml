@@ -32,3 +32,4 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --extra dev
       - run: uv run pytest tests/
+      - run: uv run sphinx-build -W -n -E docs/src/ docs/output
