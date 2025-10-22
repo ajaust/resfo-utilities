@@ -19,14 +19,12 @@ class InvalidEgridFileError(ValueError):
 class MapAxes:
     """The axes of the map coordinate system.
 
-    Usually, a corner-point grid contains x,y values that
-    needs to be transformed into a map coordinate system
-    (which could be :term:`UTM-coordinates`). That coordinate
-    system is represented by MapAxes.
+    Usually, a corner-point grid contains x,y values that needs to be transformed
+    into a map coordinate system (which could be :term:`UTM-coordinates`). That
+    coordinate system is represented by MapAxes.
 
-    Note that regardless of the size of the axes, when transforming
-    from the grid coordinate system to the map coordinate system,
-    scaling is not applied.
+    Note that regardless of the size of the axes, when transforming from the grid
+    coordinate system to the map coordinate system, scaling is not applied.
 
     Attributes:
         y_axis:
@@ -44,7 +42,13 @@ class MapAxes:
     def transform_map_points(
         self, points: npt.NDArray[np.float32]
     ) -> npt.NDArray[np.float32]:
-        """Transforms points from map coordinates to grid coordinates."""
+        """Transforms points from map coordinates to grid coordinates.
+
+        Scaling according to length of the axes is not applied.
+
+        Returns:
+            The given map points in the grid coordinate system.
+        """
         translated = points - np.array([*self.origin, 0])
         tx = translated[:, 0]
         ty = translated[:, 1]
@@ -77,8 +81,8 @@ class CornerpointGrid:
     are in the CornerpointGrid.coord array.
 
     For the cell at position i,j,k, its eight corner vertices are defined by
-    giving the z values along the pillars at [(i,j), (i+1, j), (i, j+1), (i+1, j+1)] which
-    are in the CornerpointGrid.zcorn array.
+    giving the z values along the pillars at [(i,j), (i+1, j), (i, j+1), (i+1, j+1)]
+    which are in the CornerpointGrid.zcorn array.
 
 
     Attributes:
@@ -86,8 +90,8 @@ class CornerpointGrid:
             A (ni+1, nj+1, 2, 3) array where coord[i,j,0] is the top end point
             of the i,j pillar and coord[i,j,1] is the corresponding bottom end point.
         zcorn:
-            A (ni, nj, nk, 8) array where zcorn[i,j,k] is the z value of the 8 corners
-            of the cell at i,j,k.
+            A (ni, nj, nk, 8) array where zcorn[i,j,k] is the z value of
+            the 8 corners of the cell at i,j,k.
 
         map_axes:
             Optionally each point is interpreted to be relative to some map
@@ -221,7 +225,19 @@ class CornerpointGrid:
     def find_cell_containing_point(
         self, points: npt.ArrayLike, map_coordinates: bool = True
     ) -> list[tuple[float, float, float] | None]:
-        """Find a cell in the grid which contains the given point."""
+        """Find a cell in the grid which contains the given point.
+
+        Args:
+            points:
+                The points to find cells for
+            map_coordinates:
+                Whether points are in the map coordinate system.
+                Defaults to True.
+
+        Returns:
+            list of i,j,k indecies for each point (or None if the
+            point is not contained in any cell.
+        """
         points = np.asarray(points)
         result: list[tuple[float, float, float] | None] = []
         if map_coordinates and self.map_axes is not None:
@@ -352,9 +368,12 @@ class CornerpointGrid:
         """Whether the points (x,y,z) is in the cell at (i,j,k).
 
         Param:
-            points: x,y,z triple or array of x,y,z triples to be tested for containment.
-            tolerance: The minimum distance for points near the boundary to decide containment.
-            map_coordinates: Whether the given points are in the mapaxes coordinate system, defaults to true.
+            points:
+                x,y,z triple or array of x,y,z triples to be tested for containment.
+            tolerance:
+                The minimum distance for points near the boundary to decide containment.
+            map_coordinates:
+                Whether the given points are in the mapaxes coordinate system, defaults to true.
 
         Returns:
             Array of boolean values for each triplet describing whether
