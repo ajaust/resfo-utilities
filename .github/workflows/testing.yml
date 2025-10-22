@@ -30,6 +30,6 @@ jobs:
         with:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
-      - run: uv sync --extra dev
+      - run: uv sync --all-extras
       - run: uv run pytest tests/
       - run: uv run sphinx-build -W -n -E docs/source/ docs/output
