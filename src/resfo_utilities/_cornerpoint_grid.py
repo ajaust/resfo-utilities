@@ -28,11 +28,11 @@ class MapAxes:
 
     Attributes:
         y_axis:
-            A point along the map y axis
+            A point along the map y axis.
         origin:
-            The origin of the map coordinate system
+            The origin of the map coordinate system.
         x_axis:
-            A point along the map x axis
+            A point along the map x axis.
     """
 
     y_axis: tuple[np.float32, np.float32]
@@ -124,7 +124,7 @@ class CornerpointGrid:
             InvalidEgridFileError:
                 When the egrid file is not valid.
             OSError:
-                If the given filepath cannot be opened
+                If the given filepath cannot be opened.
 
         """
         coord = None
@@ -229,7 +229,7 @@ class CornerpointGrid:
 
         Args:
             points:
-                The points to find cells for
+                The points to find cells for.
             map_coordinates:
                 Whether points are in the map coordinate system.
                 Defaults to True.
@@ -291,7 +291,7 @@ class CornerpointGrid:
 
             @cached_property
             def distance_from_bounds(self) -> np.float32:
-                """Manhattan distance from the point to the quad bounding box"""
+                """Manhattan distance from the point to the quad bounding box."""
                 x_dist = max(self.min_x - self.p[0], self.p[0] - self.max_x, 0)
                 y_dist = max(self.min_y - self.p[1], self.p[1] - self.max_y, 0)
                 return x_dist + y_dist
