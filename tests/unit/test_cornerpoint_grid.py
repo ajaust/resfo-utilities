@@ -16,6 +16,10 @@ def write_to_buffer(file_contents):
     return buffer
 
 
+def pad_to(lst: list[int], target_len: int):
+    return np.pad(lst, (0, target_len - len(lst)), mode="constant")
+
+
 def test_that_read_egrid_raises_invalid_egrid_file_when_gridhead_is_mess():
     with pytest.raises(InvalidEgridFileError, match="MESS"):
         CornerpointGrid.read_egrid(write_to_buffer([("GRIDHEAD", resfo.MESS)]))
@@ -30,6 +34,26 @@ def test_that_read_egrid_raises_invalid_egrid_file_when_coord_is_mess():
     with pytest.raises(InvalidEgridFileError, match="MESS"):
         CornerpointGrid.read_egrid(
             write_to_buffer([("GRIDHEAD", [1, 1, 1, 1]), ("COORD   ", resfo.MESS)])
+        )
+
+
+def test_that_read_egrid_raises_invalid_egrid_file_the_coordinate_system_is_radial():
+    grid_head_array = pad_to([1, 1, 1, 1], 100)
+    grid_head_array[26] = 1  # set to 1 to indicate radial grid
+    with pytest.raises(InvalidEgridFileError, match="contains a radial grid"):
+        CornerpointGrid.read_egrid(write_to_buffer([("GRIDHEAD", grid_head_array)]))
+
+
+def test_that_read_egrid_warns_when_the_global_grid_does_not_have_reference_number_zero():
+    with pytest.warns(UserWarning, match="reference number 1, expected 0"):
+        CornerpointGrid.read_egrid(
+            write_to_buffer(
+                [
+                    ("GRIDHEAD", [1, 1, 1, 1, 1]),
+                    ("COORD   ", [1.0] * (8 * 3)),
+                    ("ZCORN   ", [1.0] * 8),
+                ],
+            )
         )
 
 
@@ -54,10 +78,6 @@ def test_that_read_egrid_raises_invalid_egrid_file_when_mapaxes_is_mess():
 def test_that_read_egrid_raises_invalid_egrid_file_when_mapaxes_has_too_many_values():
     with pytest.raises(InvalidEgridFileError, match="contained too few elements"):
         CornerpointGrid.read_egrid(write_to_buffer([("MAPAXES ", [1.0])]))
-
-
-def pad_to(lst: list[int], target_len: int):
-    return np.pad(lst, (0, target_len - len(lst)), mode="constant")
 
 
 @pytest.mark.parametrize(

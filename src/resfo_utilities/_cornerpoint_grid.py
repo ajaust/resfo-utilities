@@ -6,6 +6,7 @@ from numpy import typing as npt
 import numpy as np
 import resfo
 import trimesh
+import warnings
 from matplotlib.path import Path
 import heapq
 from functools import cached_property
@@ -111,7 +112,8 @@ class CornerpointGrid:
         """Read the global grid from an .EGRID or .FEGRID file.
 
         If the EGRID contains Local Grid Refinements or Coarsening Groups,
-        that is silently ignored and only the host grid is read.
+        that is silently ignored and only the host grid is read. Radial grids
+        are not supported and will cause InvalidEgridFileError to be raised.
 
         Args:
             file_like:
@@ -122,7 +124,7 @@ class CornerpointGrid:
                 (unformatted) or a text-stream when an opened file is given.
         Raises:
             InvalidEgridFileError:
-                When the egrid file is not valid.
+                When the egrid file is not valid, or contains a radial grid.
             OSError:
                 If the given filepath cannot be opened.
 
@@ -167,6 +169,13 @@ class CornerpointGrid:
 
                 return array
 
+            def optional_get(array: npt.NDArray[T] | None, index: int) -> T | None:
+                if array is None:
+                    return None
+                if len(array) <= index:
+                    return None
+                return array[index]
+
             for entry in resfo.lazy_read(stream):
                 kw = entry.read_keyword()
                 match kw:
@@ -176,6 +185,19 @@ class CornerpointGrid:
                         coord = validate_array(kw, entry.read_array())
                     case "GRIDHEAD":
                         array = validate_array(kw, entry.read_array(), 4)
+                        if (reference_number := optional_get(array, 4)) != 0:
+                            warnings.warn(
+                                f"The global grid in {filename} had "
+                                f"reference number {reference_number}, expected 0."
+                                " This could indicate that the grid being read"
+                                " is actually an LGR grid."
+                            )
+                        if optional_get(array, 26) not in {0, None}:
+                            raise InvalidEgridFileError(
+                                f"EGRID file {filename} contains a radial grid"
+                                " which is not supported by resfo-utilities."
+                            )
+
                         dims = tuple(array[1:4])
                     case "MAPAXES ":
                         array = validate_array(kw, entry.read_array(), 6)
