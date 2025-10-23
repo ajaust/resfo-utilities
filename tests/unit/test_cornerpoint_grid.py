@@ -433,3 +433,39 @@ def test_that_point_in_cell_correctly_orders_zcorn_against_coord():
     # By default points are in the map coordinate system
     assert grid.point_in_cell(point, 0, 0, 0)
     assert grid.find_cell_containing_point(point) == [(0, 0, 0)]
+
+
+def test_that_point_in_cell_correctly_assign_vertices_to_faces():
+    """This is a regression test for a bug where point_in_cell
+    assigned vertices to faces in a way that created a hole in the cell surface"""
+    grid = CornerpointGrid(
+        coord=np.array(
+            [
+                [
+                    [[0, 0, 0], [0, 0, 1]],
+                    [[1, 0, 0], [1, 0, 1]],
+                ],
+                [
+                    [[0, 2, 0], [0, 1, 1]],
+                    [[1, 1, 0], [1, 2, 1]],
+                ],
+            ],
+            dtype=np.float32,
+        ),
+        zcorn=np.array(
+            [
+                [
+                    [
+                        [0, 0, 0, 0, 1, 1, 1, 1],
+                    ]
+                ]
+            ],
+            dtype=np.float32,
+        ),
+    )
+
+    # A point contained in cell 0,0,0
+    point = np.array([[0.9, 1.0, 0.75]], dtype=np.float64)
+
+    assert grid.point_in_cell(point, 0, 0, 0)
+    assert grid.find_cell_containing_point(point) == [(0, 0, 0)]
