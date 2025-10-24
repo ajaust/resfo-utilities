@@ -1,5 +1,5 @@
-resfo
-===========
+resfo-utilities
+===============
 
 
 resfo-utilities is a library for working with output from
