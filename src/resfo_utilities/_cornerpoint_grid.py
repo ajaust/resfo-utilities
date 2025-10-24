@@ -72,7 +72,7 @@ class MapAxes:
 @dataclass
 class CornerpointGrid:
     """
-    A :term:`corner-point grid` is a tessellation of a 3D volumne where
+    A :term:`corner-point grid` is a tessellation of a 3D volume where
     each cell is a hexahedron.
 
     Each cell is identified by a integer coordinate (i,j,k).
@@ -100,7 +100,7 @@ class CornerpointGrid:
         map_axes:
             Optionally each point is interpreted to be relative to some map
             coordinate system. Defaults to the unit coordinate system with
-            origo at (0,0).
+            origin at (0,0).
 
     """
 
@@ -118,7 +118,7 @@ class CornerpointGrid:
 
         Args:
             file_like:
-                The EGRID file, could either be a filename, patlike or an opened
+                The EGRID file, could either be a filename, pathlike or an opened
                 EGRID file. The function also handles formatted egrid files (.FEGRID).
                 Whether the file is formatted or not is determined by looking at the
                 extension a filepath is given and by whether the stream is a byte-stream
@@ -264,7 +264,7 @@ class CornerpointGrid:
                 be considered to be contained in the cell.
 
         Returns:
-            list of i,j,k indecies for each point (or None if the
+            list of i,j,k indices for each point (or None if the
             point is not contained in any cell.
         """
         points = np.asarray(points)
@@ -328,7 +328,7 @@ class CornerpointGrid:
             def __lt__(self, other: object) -> bool:
                 """Used to order elements in the search queue.
 
-                The Quads are orderd by distance_from_bounds.
+                The Quads are ordered by distance_from_bounds.
                 """
                 if not isinstance(other, Quad):
                     return False
