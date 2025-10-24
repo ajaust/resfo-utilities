@@ -356,7 +356,9 @@ def regular_grids(draw):
         coord[i, j, 0] = [i, j, top_depth]
         coord[i, j, 1] = [i, j, bot_depth]
     for i, j, k in product(range(ni), range(nj), range(nk)):
-        zcorn[i, j, k] = [height * (k // nk)] * 4 + [height * ((k + 1) // nk)] * 4
+        zcorn[i, j, k] = [height * (k / nk) + top_depth] * 4 + [
+            height * ((k + 1) / nk) + top_depth
+        ] * 4
     return CornerpointGrid(coord, zcorn)
 
 
