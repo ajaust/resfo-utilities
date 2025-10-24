@@ -1,11 +1,11 @@
 from __future__ import annotations
 import os
-from typing import Self, Any, IO, TypeVar
+from typing import Self, Any, IO, TypeVar, Callable
 from dataclasses import dataclass
 from numpy import typing as npt
 import numpy as np
 import resfo
-import trimesh
+import scipy.optimize
 import warnings
 from matplotlib.path import Path
 import heapq
@@ -92,14 +92,15 @@ class CornerpointGrid:
             of the i,j pillar and coord[i,j,1] is the corresponding bottom end point.
         zcorn:
             A (ni, nj, nk, 8) array where zcorn[i,j,k] is the z value of
-            the 8 corners of the cell at i,j,k.
+            the 8 corners of the cell at i,j,k. The order of the corner z values
+            are as follows:
+            [TSW, TSE, TNW, TNE, BSW, BSE, BNW, BNE] where N(orth) means higher y,
+            E(east) means higher x, T(op) means lower z (when z is interpreted as depth).
 
         map_axes:
             Optionally each point is interpreted to be relative to some map
             coordinate system. Defaults to the unit coordinate system with
-            origo at (0,0). The order of the corner z valus are as follows:
-            [TSW, TSE, TNW, TNE, BSW, BSE, BNW, BNE] where N(orth) means higher y,
-            E(east) means higer x, T(op) means lower z (when z is interpreted as depth).
+            origo at (0,0).
 
     """
 
@@ -245,7 +246,10 @@ class CornerpointGrid:
         return cls(coord, zcorn, map_axes)
 
     def find_cell_containing_point(
-        self, points: npt.ArrayLike, map_coordinates: bool = True
+        self,
+        points: npt.ArrayLike,
+        map_coordinates: bool = True,
+        tolerance: float = 1.0e-6,
     ) -> list[tuple[float, float, float] | None]:
         """Find a cell in the grid which contains the given point.
 
@@ -255,6 +259,9 @@ class CornerpointGrid:
             map_coordinates:
                 Whether points are in the map coordinate system.
                 Defaults to True.
+            tolerance:
+                The maximum distance to the cell boundary a point can have to
+                be considered to be contained in the cell.
 
         Returns:
             list of i,j,k indecies for each point (or None if the
@@ -346,14 +353,16 @@ class CornerpointGrid:
 
                 # If the quad contains the point then search through each k index
                 # for that quad
-                if node.distance_from_bounds <= 0 and Path(vertices).contains_points(
-                    [p[0:2]]
-                ):
+                if node.distance_from_bounds <= tolerance and Path(
+                    vertices
+                ).contains_points([p[0:2]], radius=tolerance):
                     for k in range(self.zcorn.shape[2]):
                         zcorn = self.zcorn[i, j, k]
+                        z = p[2]
                         # Prune by bounding box first then check whether point_in_cell
-                        if zcorn.min() <= p[2] <= zcorn.max() and self.point_in_cell(
-                            p, i, j, k, map_coordinates=False
+                        if (
+                            zcorn.min() - tolerance <= z <= zcorn.max() + tolerance
+                            and self.point_in_cell(p, i, j, k, map_coordinates=False)
                         ):
                             prev_ij = (i, j)
                             result.append((i, j, k))
@@ -378,36 +387,11 @@ class CornerpointGrid:
 
         return result
 
-    def point_in_cell(
-        self,
-        points: npt.ArrayLike,
-        i: int,
-        j: int,
-        k: int,
-        tolerance: float = 1e-6,
-        map_coordinates: bool = True,
-    ) -> npt.NDArray[np.bool_]:
-        """Whether the points (x,y,z) is in the cell at (i,j,k).
+    def cell_corners(self, i: int, j: int, k: int) -> npt.NDArray[np.float32]:
+        """Array of coordinates for all corners of the cell at i,j,k
 
-        Param:
-            points:
-                x,y,z triple or array of x,y,z triples to be tested for containment.
-            tolerance:
-                The maximum distance to the cell boundary a point can have to
-                be considered to be contained in the cell.
-            map_coordinates:
-                Whether the given points are in the mapaxes coordinate system,
-                defaults to true.
-
-        Returns:
-            Array of boolean values for each triplet describing whether
-            it is contained in the cell.
+        The order of the corners are the same as in zcorn.
         """
-        points = np.asarray(points)
-        if len(points.shape) == 1:
-            points = points[np.newaxis, :]
-        if map_coordinates and self.map_axes is not None:
-            points = self.map_axes.transform_map_points(points)
         pillar_vertices = np.concatenate(
             [
                 self.coord[i, j, :],
@@ -425,26 +409,99 @@ class CornerpointGrid:
             return np.concatenate([a, a])
 
         t = (self.zcorn[i, j, k] - twice(top_z)) / twice(bot_z - top_z)
-        mesh = trimesh.Trimesh(
-            vertices=twice(top) + t[:, np.newaxis] * twice(bot - top),
-            faces=np.array(
-                [
-                    [0, 1, 2],
-                    [1, 2, 3],
-                    [0, 1, 5],
-                    [0, 4, 5],
-                    [0, 2, 6],
-                    [0, 4, 6],
-                    [4, 6, 5],
-                    [5, 6, 7],
-                    [1, 3, 7],
-                    [1, 5, 7],
-                    [2, 3, 7],
-                    [2, 6, 7],
-                ]
-            ),
+        return twice(top) + t[:, np.newaxis] * twice(bot - top)
+
+    def point_in_cell(
+        self,
+        points: npt.ArrayLike,
+        i: int,
+        j: int,
+        k: int,
+        tolerance: float = 1e-6,
+        map_coordinates: bool = True,
+    ) -> npt.NDArray[np.bool_]:
+        """Whether the points (x,y,z) is in the cell at (i,j,k).
+
+        For containment the cell are considered to have bilinear faces.
+
+        Param:
+            points:
+                x,y,z triple or array of x,y,z triples to be tested for containment.
+            tolerance:
+                The tolerance used for numerical precision in the linear
+                interpolation calculation.
+            map_coordinates:
+                Whether the given points are in the mapaxes coordinate system,
+                defaults to true.
+
+        Returns:
+            Array of boolean values for each triplet describing whether
+            it is contained in the cell.
+        """
+        points = np.asarray(points)
+        if len(points.shape) == 1:
+            points = points[np.newaxis, :]
+        if map_coordinates and self.map_axes is not None:
+            points = self.map_axes.transform_map_points(points)
+
+        vertices = self.cell_corners(i, j, k).astype(np.float64)
+
+        corner_signs = np.array(
+            [
+                [-1, -1, -1],
+                [1, -1, -1],
+                [-1, 1, -1],
+                [1, 1, -1],
+                [-1, -1, 1],
+                [1, -1, 1],
+                [-1, 1, 1],
+                [1, 1, 1],
+            ]
         )
-        return mesh.contains(points) | (mesh.nearest.on_surface(points)[1] < tolerance)
+
+        def residual(
+            point: tuple[float, float, float],
+        ) -> Callable[[npt.NDArray[np.float64]], npt.NDArray[np.float64]]:
+            def inner(
+                xi_eta_zeta: npt.NDArray[np.float64],
+            ) -> npt.NDArray[np.float64]:
+                xi, eta, zeta = xi_eta_zeta
+                shape_matrix = (
+                    1
+                    / 8
+                    * (1 + xi * corner_signs[:, 0])
+                    * (1 + eta * corner_signs[:, 1])
+                    * (1 + zeta * corner_signs[:, 2])
+                )
+                mapped = shape_matrix @ vertices
+                return mapped - point
+
+            return inner
+
+        solutions = []
+        for point in points:
+            point = point.astype(np.float64)
+            initial_guess = 2 * (point - vertices[0]) / (vertices[6] - vertices[0]) - 1
+            initial_guess = np.clip(initial_guess, -1, 1)
+            np.nan_to_num(initial_guess, copy=False)
+            sol = scipy.optimize.least_squares(
+                residual(point),
+                initial_guess,
+                method="trf",
+                xtol=tolerance,
+                ftol=tolerance,
+                gtol=tolerance,
+            )
+            if not sol.success:
+                solutions.append(False)
+            else:
+                solutions.append(
+                    bool(
+                        np.all(np.abs(sol.x) <= 1.0 + tolerance)
+                        and np.linalg.norm(residual(point)(sol.x)) <= 1e-4 + tolerance
+                    )
+                )
+        return np.array(solutions, dtype=np.bool_)
 
     def _pillars_z_plane_intersection(self, z: np.float32) -> npt.NDArray[np.float32]:
         shape = self.coord.shape

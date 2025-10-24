@@ -4,7 +4,7 @@ import pytest
 from io import BytesIO
 import numpy as np
 from numpy.testing import assert_allclose
-from hypothesis import given
+from hypothesis import given, assume
 import hypothesis.strategies as st
 from itertools import product
 
@@ -332,7 +332,13 @@ coordinates = st.floats(
 def regular_grids(draw):
     ni, nj, nk = draw(st.tuples(*([st.integers(min_value=1, max_value=10)] * 3)))
     height = draw(
-        st.floats(min_value=16.0, allow_nan=False, allow_infinity=False, width=32)
+        st.floats(
+            min_value=16.0,
+            max_value=2**32,
+            allow_nan=False,
+            allow_infinity=False,
+            width=32,
+        )
     )
     top_depth = draw(
         st.floats(
@@ -371,9 +377,38 @@ def test_that_found_cell_contains_point(grid, point, data):
                 st.integers(min_value=0, max_value=grid.zcorn.shape[2] - 1),
             )
         )
-        assert not grid.point_in_cell(point, i, j, k, tolerance=0)
+        assert not grid.point_in_cell(point, i, j, k, tolerance=1e-14)
     else:
         assert grid.point_in_cell(point, *cell)
+
+
+@given(
+    grid=regular_grids(),
+    point=st.tuples(coordinates, coordinates, coordinates),
+    data=st.data(),
+)
+def test_that_on_regular_grids_point_in_cell_is_the_same_as_in_bounding_box(
+    grid, point, data
+):
+    cell = data.draw(
+        st.tuples(
+            st.integers(min_value=0, max_value=grid.zcorn.shape[0] - 1),
+            st.integers(min_value=0, max_value=grid.zcorn.shape[1] - 1),
+            st.integers(min_value=0, max_value=grid.zcorn.shape[2] - 1),
+        )
+    )
+    cell_corners = grid.cell_corners(*cell)
+    tolerance = 1e-6
+    min_point = cell_corners.min(axis=0) - tolerance
+    max_point = cell_corners.max(axis=0) + tolerance
+
+    # avoid points close to the boundary
+    assume(np.all(np.abs(point - min_point) >= 0.01))
+    assume(np.all(np.abs(max_point - point) >= 0.01))
+
+    assert grid.point_in_cell(point, *cell, tolerance) == (
+        np.all(min_point <= point) and np.all(point <= max_point)
+    )
 
 
 def test_that_map_coordinates_parameter_sets_the_coordinate_system_for_points():
@@ -469,3 +504,57 @@ def test_that_point_in_cell_correctly_assign_vertices_to_faces():
 
     assert grid.point_in_cell(point, 0, 0, 0)
     assert grid.find_cell_containing_point(point) == [(0, 0, 0)]
+
+
+@given(*([st.floats(min_value=-1.0, max_value=2.0)] * 3))
+@pytest.mark.parametrize(
+    "bottom_heights",
+    [
+        pytest.param(
+            [0.05, 1.0, 1.0, 0.05],
+            id="the bottom face has two elevated diagonally opposed corners",
+        ),
+        pytest.param(
+            [0.0, 1.0, 1.0, 1.0],
+            id="one bottom corner is collapsed onto the corresponding top corner",
+        ),
+        pytest.param(
+            [0.0, 0.0, 1.0, 1.0],
+            id="one bottom edge is collapsed onto the corresponding top edge",
+        ),
+    ],
+)
+def test_point_in_cell_considers_cells_as_trilinear_shapes(bottom_heights, x, y, z):
+    # All grids are unit grids except for the bottom face
+    grid = CornerpointGrid(
+        coord=np.array(
+            [
+                [[[0, 0, 0], [0, 0, 1]], [[0, 1, 0], [0, 1, 1]]],
+                [[[1, 0, 0], [1, 0, 1]], [[1, 1, 0], [1, 1, 1]]],
+            ],
+            dtype=np.float32,
+        ),
+        zcorn=np.array([[[[0, 0, 0, 0, *bottom_heights]]]], dtype=np.float32),
+    )
+
+    def bottom_face_depth(x, y):
+        """The depth of the bottom face at x,y by bilinear interpolation"""
+        xy_1 = (1 - x) * grid.zcorn[0, 0, 0, 4] + x * grid.zcorn[0, 0, 0, 5]
+        xy_2 = (1 - x) * grid.zcorn[0, 0, 0, 6] + x * grid.zcorn[0, 0, 0, 7]
+        return (1 - y) * xy_1 + y * xy_2
+
+    tolerance = 1e-6
+
+    def in_bounding_box(point):
+        return all(-1 * tolerance <= c <= 1 + tolerance for c in point)
+
+    # avoid points that is very close to the boundary to avoid
+    # numerical issues
+    assume(np.abs(z) >= 0.01)
+    assume(np.abs(bottom_face_depth(x, y) - z) >= 0.01)
+
+    # only the bottom face is different from the bounding box
+    # so containment is the same as the conjunction of the two conditions
+    assert grid.point_in_cell([x, y, z], 0, 0, 0, tolerance) == (
+        z <= bottom_face_depth(x, y) and in_bounding_box((x, y, z))
+    )
