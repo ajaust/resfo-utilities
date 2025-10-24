@@ -250,7 +250,7 @@ class CornerpointGrid:
         points: npt.ArrayLike,
         map_coordinates: bool = True,
         tolerance: float = 1.0e-6,
-    ) -> list[tuple[float, float, float] | None]:
+    ) -> list[tuple[int, int, int] | None]:
         """Find a cell in the grid which contains the given point.
 
         Args:
@@ -268,7 +268,7 @@ class CornerpointGrid:
             point is not contained in any cell.
         """
         points = np.asarray(points)
-        result: list[tuple[float, float, float] | None] = []
+        result: list[tuple[int, int, int] | None] = []
         if map_coordinates and self.map_axes is not None:
             points = self.map_axes.transform_map_points(points)
 
