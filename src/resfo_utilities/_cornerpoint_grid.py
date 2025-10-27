@@ -291,6 +291,8 @@ class CornerpointGrid:
             i: int
             j: int
             p: npt.NDArray[np.float32]
+            i_neighbourhood: int
+            j_neighbourhood: int
 
             @cached_property
             def vertices(self) -> npt.NDArray[np.float32]:
@@ -343,9 +345,13 @@ class CornerpointGrid:
             found = False
             mesh = self._pillars_z_plane_intersection(p[2])
             if prev_ij is None:
-                queue = [Quad(mesh, 0, 0, p)]
+                queue = [
+                    Quad(
+                        mesh, dims[0] // 2, dims[1] // 2, p, dims[0] // 2, dims[1] // 2
+                    )
+                ]
             else:
-                queue = [Quad(mesh, *prev_ij, p)]
+                queue = [Quad(mesh, *prev_ij, p, 1, 1)]
             visited = set([(queue[0].i, queue[0].j)])
             while queue:
                 node = heapq.heappop(queue)
@@ -373,16 +379,24 @@ class CornerpointGrid:
                     break
 
                 # Add each neighbour to the queue if not visited
-                for di in (-1, 0, 1):
-                    ni = i + di
-                    if ni < 0 or ni >= dims[0]:
-                        continue
-                    for dj in (-1, 0, 1):
-                        nj = j + dj
-                        if nj < 0 or nj >= dims[1]:
-                            continue
+                size_i = node.i_neighbourhood
+                for di in (-1 * size_i, 0, size_i):
+                    ni = np.clip(i + di, 0, dims[0] - 1)
+                    size_j = node.j_neighbourhood
+                    for dj in (-1 * size_j, 0, size_j):
+                        nj = np.clip(j + dj, 0, dims[1] - 1)
                         if (ni, nj) not in visited:
-                            heapq.heappush(queue, Quad(mesh, ni, nj, p))
+                            heapq.heappush(
+                                queue,
+                                Quad(
+                                    mesh,
+                                    ni,
+                                    nj,
+                                    p,
+                                    max(size_i // 2, 1),
+                                    max(size_j // 2, 1),
+                                ),
+                            )
                             visited.add((ni, nj))
             if not found:
                 result.append(None)
