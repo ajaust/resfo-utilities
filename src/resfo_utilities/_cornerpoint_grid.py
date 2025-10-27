@@ -272,6 +272,8 @@ class CornerpointGrid:
         if map_coordinates and self.map_axes is not None:
             points = self.map_axes.transform_map_points(points)
 
+        dims = self.zcorn.shape[0:3]
+
         # This algorithm will for each point p calculate the mesh surface that
         # is the intersection of the pillars with the plane z=p[2]. Then it searches
         # through the quad with a heuristical search that orders each neighbour by
@@ -334,7 +336,7 @@ class CornerpointGrid:
                     return False
                 return bool(self.distance_from_bounds < other.distance_from_bounds)
 
-        if self.zcorn.shape[0] <= 0 or self.zcorn.shape[1] <= 0:
+        if dims[0] <= 0 or dims[1] <= 0:
             return [None] * len(points)
 
         for p in points:
@@ -356,7 +358,7 @@ class CornerpointGrid:
                 if node.distance_from_bounds <= tolerance and Path(
                     vertices
                 ).contains_points([p[0:2]], radius=tolerance):
-                    for k in range(self.zcorn.shape[2]):
+                    for k in range(dims[2]):
                         zcorn = self.zcorn[i, j, k]
                         z = p[2]
                         # Prune by bounding box first then check whether point_in_cell
@@ -373,11 +375,11 @@ class CornerpointGrid:
                 # Add each neighbour to the queue if not visited
                 for di in (-1, 0, 1):
                     ni = i + di
-                    if ni < 0 or ni >= self.zcorn.shape[0]:
+                    if ni < 0 or ni >= dims[0]:
                         continue
                     for dj in (-1, 0, 1):
                         nj = j + dj
-                        if nj < 0 or nj >= self.zcorn.shape[1]:
+                        if nj < 0 or nj >= dims[1]:
                             continue
                         if (ni, nj) not in visited:
                             heapq.heappush(queue, Quad(mesh, ni, nj, p))
