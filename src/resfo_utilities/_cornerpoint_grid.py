@@ -7,7 +7,6 @@ import numpy as np
 import resfo
 import scipy.optimize
 import warnings
-from matplotlib.path import Path
 import heapq
 from functools import cached_property
 
@@ -290,6 +289,8 @@ class CornerpointGrid:
             points = self.map_axes.transform_map_points(points)
 
         dims = self.zcorn.shape[0:3]
+        top = self._pillars_z_plane_intersection(self.zcorn.min())
+        bot = self._pillars_z_plane_intersection(self.zcorn.max())
 
         # This algorithm will for each point p calculate the mesh surface that
         # is the intersection of the pillars with the plane z=p[2]. Then it searches
@@ -304,7 +305,6 @@ class CornerpointGrid:
         class Quad:
             """The quad at index i,j"""
 
-            mesh: npt.NDArray[np.float32]
             i: int
             j: int
             p: npt.NDArray[np.float32]
@@ -315,10 +315,14 @@ class CornerpointGrid:
             def vertices(self) -> npt.NDArray[np.float32]:
                 return np.array(
                     [
-                        self.mesh[self.i, self.j],
-                        self.mesh[self.i + 1, self.j],
-                        self.mesh[self.i + 1, self.j + 1],
-                        self.mesh[self.i, self.j + 1],
+                        top[self.i, self.j],
+                        top[self.i + 1, self.j],
+                        top[self.i + 1, self.j + 1],
+                        top[self.i, self.j + 1],
+                        bot[self.i, self.j],
+                        bot[self.i + 1, self.j],
+                        bot[self.i + 1, self.j + 1],
+                        bot[self.i, self.j + 1],
                     ],
                     dtype=np.float32,
                 )
@@ -360,27 +364,21 @@ class CornerpointGrid:
 
         for p in points:
             found = False
-            mesh = self._pillars_z_plane_intersection(p[2])
             if prev_ij is None:
                 queue = [
-                    Quad(
-                        mesh, dims[0] // 2, dims[1] // 2, p, dims[0] // 2, dims[1] // 2
-                    )
+                    Quad(dims[0] // 2, dims[1] // 2, p, dims[0] // 2, dims[1] // 2)
                 ]
             else:
-                queue = [Quad(mesh, *prev_ij, p, 1, 1)]
+                queue = [Quad(*prev_ij, p, 1, 1)]
             visited = set([(queue[0].i, queue[0].j)])
             while queue:
                 node = heapq.heappop(queue)
-                vertices = node.vertices
                 i = node.i
                 j = node.j
 
                 # If the quad contains the point then search through each k index
                 # for that quad
-                if node.distance_from_bounds <= tolerance and Path(
-                    vertices
-                ).contains_points([p[0:2]], radius=tolerance):
+                if node.distance_from_bounds <= 2 * tolerance:
                     for k in range(dims[2]):
                         zcorn = self.zcorn[i, j, k]
                         z = p[2]
@@ -393,6 +391,7 @@ class CornerpointGrid:
                             result.append((i, j, k))
                             found = True
                             break
+                if found:
                     break
 
                 # Add each neighbour to the queue if not visited
@@ -406,7 +405,6 @@ class CornerpointGrid:
                             heapq.heappush(
                                 queue,
                                 Quad(
-                                    mesh,
                                     ni,
                                     nj,
                                     p,

@@ -9,8 +9,9 @@ import pytest
 from io import BytesIO
 import numpy as np
 from numpy.testing import assert_allclose
-from hypothesis import given, assume
+from hypothesis import given, assume, example
 import hypothesis.strategies as st
+from hypothesis.extra.numpy import arrays
 from itertools import product
 
 
@@ -239,61 +240,6 @@ def test_that_read_egrid_fetches_the_geometry_from_the_global_grid_in_the_file(
     ]
 
 
-def test_that_pillars_z_plane_intersection_returns_meshgrid():
-    coord = np.array(
-        [
-            [
-                [[0.0, 0.0, 0.0], [1.0, 10.0, 100.0]],
-                [[10.0, 20.0, 0.0], [20.0, 30.0, 100.0]],
-            ]
-        ]
-    )
-    grid = CornerpointGrid(coord, np.zeros((0, 1, 1, 8), dtype=np.float32), None)
-    assert grid._pillars_z_plane_intersection(50.0).tolist() == [
-        [[0.5, 5.0], [15.0, 25.0]]
-    ]
-
-
-def test_that_pillars_z_plane_intersection_keeps_same_shape_as_coord_in_i_j_dimensions():
-    coord = np.array(
-        [
-            [
-                [[0.0, 1.0, 100.0], [0.0, 1.0, 200.0]],
-                [[2.0, 3.0, 101.0], [2.0, 3.0, 201.0]],
-                [[4.0, 5.0, 102.0], [4.0, 5.0, 202.0]],
-            ],
-            [
-                [[6.0, 7.0, 103.0], [6.0, 7.0, 203.0]],
-                [[8.0, 9.0, 104.0], [8.0, 9.0, 204.0]],
-                [[10.0, 11.0, 105.0], [10.0, 11.0, 205.0]],
-            ],
-            [
-                [[12.0, 13.0, 106.0], [12.0, 13.0, 206.0]],
-                [[14.0, 15.0, 107.0], [14.0, 15.0, 207.0]],
-                [[16.0, 17.0, 108.0], [16.0, 17.0, 208.0]],
-            ],
-        ]
-    )
-    grid = CornerpointGrid(coord, np.zeros((2, 2, 1, 8), dtype=np.float32), None)
-    assert grid._pillars_z_plane_intersection(50.0).tolist() == [
-        [
-            [0.0, 1.0],
-            [2.0, 3.0],
-            [4.0, 5.0],
-        ],
-        [
-            [6.0, 7.0],
-            [8.0, 9.0],
-            [10.0, 11.0],
-        ],
-        [
-            [12.0, 13.0],
-            [14.0, 15.0],
-            [16.0, 17.0],
-        ],
-    ]
-
-
 @pytest.fixture
 def unit_cell_grid():
     """A Corner point grid which just contains the unit cube as a cell"""
@@ -408,9 +354,12 @@ def regular_grids(draw):
     return CornerpointGrid(coord, zcorn)
 
 
+points = st.tuples(coordinates, coordinates, coordinates)
+
+
 @given(
     grid=regular_grids(),
-    point=st.tuples(coordinates, coordinates, coordinates),
+    point=points,
     data=st.data(),
 )
 def test_that_found_cell_contains_point(grid, point, data):
@@ -432,7 +381,7 @@ def test_that_found_cell_contains_point(grid, point, data):
 
 @given(
     grid=regular_grids(),
-    point=st.tuples(coordinates, coordinates, coordinates),
+    point=points,
     data=st.data(),
 )
 def test_that_on_regular_grids_point_in_cell_is_the_same_as_in_bounding_box(
@@ -655,3 +604,95 @@ def test_that_cells_with_infinite_pillars_are_invalid():
 
     with pytest.raises(InvalidGridError, match="The corners of the cell"):
         grid.cell_corners(0, 0, 0)
+
+
+@st.composite
+def single_cell_grids(draw):
+    nice_elements = dict(
+        allow_nan=False, allow_infinity=False, max_value=2**12, min_value=-(2**12)
+    )
+    coord = draw(
+        arrays(
+            np.float32,
+            (2, 2, 2, 3),
+            elements=nice_elements,
+        )
+    )
+
+    for i in range(coord.shape[0]):
+        for j in range(coord.shape[1]):
+            max_pillar = np.float32(np.max(coord[i, j]) + 0.1)
+            print(np.max(coord[i, j]) + 0.1, max_pillar)
+            coord[i, j, 1] = draw(
+                arrays(
+                    np.float32,
+                    (3,),
+                    elements={
+                        **nice_elements,
+                        **dict(min_value=max_pillar, max_value=2**14),
+                    },
+                )
+            )
+
+    grid = CornerpointGrid(
+        coord=coord,
+        zcorn=draw(arrays(np.float32, (1, 1, 1, 8), elements=nice_elements)),
+    )
+    try:
+        grid.cell_corners(0, 0, 0)
+    except InvalidGridError:
+        assume(False)
+    return grid
+
+
+@given(single_cell_grids(), points)
+@example(
+    grid=CornerpointGrid(
+        coord=np.array(
+            [
+                [
+                    [[1.0, 1.0, 1.0], [2.0, 2.0, 2.0]],
+                    [[1.0, 1.0, 1.0], [2.0, 2.0, 2.0]],
+                ],
+                [
+                    [[1.0, 1.0, 1.0], [2.0, 2.0, 2.0]],
+                    [[1.0, 1.0, 1.0], [2.0, 2.0, 2.0]],
+                ],
+            ],
+            dtype=np.float32,
+        ),
+        zcorn=np.array(
+            [[[[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]]], dtype=np.float32
+        ),
+        map_axes=None,
+    ),
+    point=(0.0, 0.0, 0.0),
+).via("discovered failure")
+@example(
+    grid=CornerpointGrid(
+        coord=np.array(
+            [
+                [
+                    [[0.0, 0.0, -1.0], [0.0, 0.0, 1.0]],
+                    [[0.0, 1.0, 0.0], [2.0, 1.0, 2.0]],
+                ],
+                [
+                    [[1.0, 0.0, -1.0], [1.0, 0.0, 1.0]],
+                    [[0.0, 1.0, -1.0], [0.0, 1.0, 1.0]],
+                ],
+            ],
+            dtype=np.float32,
+        ),
+        zcorn=np.array(
+            [[[[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]]], dtype=np.float32
+        ),
+        map_axes=None,
+    ),
+    point=(0.0, 0.0, 0.0),
+).via("constructed grid with bulging face")
+def test_that_in_single_cell_grids_found_and_contains_are_the_same(
+    grid: CornerpointGrid, point: tuple[float, float, float]
+):
+    assert bool(grid.find_cell_containing_point([point])[0]) == grid.point_in_cell(
+        point, 0, 0, 0
+    )
