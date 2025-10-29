@@ -93,6 +93,20 @@ def test_that_grid_with_invalid_coord_shape_raises():
         )
 
 
+def test_that_grid_with_invalid_zcorn_shape_raises():
+    with pytest.raises(InvalidGridError, match="zcorn had invalid dimensions"):
+        CornerpointGrid(
+            coord=np.array(
+                [
+                    [[[0, 0, 0], [0, 0, 1]], [[0, 1, 0], [0, 1, 1]]],
+                    [[[1, 0, 0], [1, 0, 1]], [[1, 1, 0], [1, 1, 1]]],
+                ],
+                dtype=np.float32,
+            ),
+            zcorn=np.array([], dtype=np.float32),
+        )
+
+
 @pytest.mark.parametrize(
     "contents_after_global_grid",
     [
@@ -215,7 +229,7 @@ def test_that_pillars_z_plane_intersection_returns_meshgrid():
             ]
         ]
     )
-    grid = CornerpointGrid(coord, None, None)
+    grid = CornerpointGrid(coord, np.zeros((1, 1, 1, 8), dtype=np.float32), None)
     assert grid._pillars_z_plane_intersection(50.0).tolist() == [
         [[0.5, 5.0], [15.0, 25.0]]
     ]
@@ -241,7 +255,7 @@ def test_that_pillars_z_plane_intersection_keeps_same_shape_as_coord_in_i_j_dime
             ],
         ]
     )
-    grid = CornerpointGrid(coord, None, None)
+    grid = CornerpointGrid(coord, np.zeros((1, 1, 1, 8), dtype=np.float32), None)
     assert grid._pillars_z_plane_intersection(50.0).tolist() == [
         [
             [0.0, 1.0],

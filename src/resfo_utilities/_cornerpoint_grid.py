@@ -115,6 +115,8 @@ class CornerpointGrid:
     def __post_init__(self) -> None:
         if len(self.coord.shape) != 4 or self.coord.shape[2:4] != (2, 3):
             raise InvalidGridError(f"coord had invalid dimensions {self.coord.shape}")
+        if len(self.zcorn.shape) != 4 or self.zcorn.shape[-1] != 8:
+            raise InvalidGridError(f"zcorn had invalid dimensions {self.zcorn.shape}")
 
     @classmethod
     def read_egrid(cls, file_like: str | os.PathLike[str] | IO[Any]) -> Self:
