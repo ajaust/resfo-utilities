@@ -630,3 +630,28 @@ def test_that_zero_height_pillar_is_invalid():
     )
     with pytest.raises(InvalidGridError, match="Grid contains zero height pillars"):
         grid.cell_corners(0, 0, 0)
+
+
+def test_that_cells_with_infinite_pillars_are_invalid():
+    grid = CornerpointGrid(
+        coord=np.array(
+            [
+                [
+                    [[np.inf, np.inf, np.inf], [np.inf, np.inf, np.inf]],
+                    [[np.inf, np.inf, np.inf], [np.inf, np.inf, np.inf]],
+                ],
+                [
+                    [[np.inf, np.inf, np.inf], [np.inf, np.inf, np.inf]],
+                    [[np.inf, np.inf, np.inf], [np.inf, np.inf, np.inf]],
+                ],
+            ],
+            dtype=np.float32,
+        ),
+        zcorn=np.array(
+            [[[[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]]], dtype=np.float32
+        ),
+        map_axes=None,
+    )
+
+    with pytest.raises(InvalidGridError, match="The corners of the cell"):
+        grid.cell_corners(0, 0, 0)

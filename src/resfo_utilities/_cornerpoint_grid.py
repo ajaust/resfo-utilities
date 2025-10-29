@@ -452,6 +452,11 @@ class CornerpointGrid:
 
         result = twice(top) + t[:, np.newaxis] * twice(bot - top)
 
+        if not np.all(np.isfinite(result)):
+            raise InvalidGridError(
+                f"The corners of the cell at {i, j, k} is not well defined"
+            )
+
         return result
 
     def point_in_cell(
