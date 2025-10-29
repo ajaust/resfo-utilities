@@ -1,3 +1,8 @@
-from ._cornerpoint_grid import CornerpointGrid, InvalidEgridFileError, MapAxes
+from ._cornerpoint_grid import (
+    CornerpointGrid,
+    InvalidEgridFileError,
+    MapAxes,
+    InvalidGridError,
+)
 
-__all__ = ["CornerpointGrid", "InvalidEgridFileError", "MapAxes"]
+__all__ = ["CornerpointGrid", "InvalidEgridFileError", "MapAxes", "InvalidGridError"]

@@ -1,4 +1,9 @@
-from resfo_utilities import CornerpointGrid, InvalidEgridFileError, MapAxes
+from resfo_utilities import (
+    CornerpointGrid,
+    InvalidEgridFileError,
+    MapAxes,
+    InvalidGridError,
+)
 import resfo
 import pytest
 from io import BytesIO
@@ -78,6 +83,14 @@ def test_that_read_egrid_raises_invalid_egrid_file_when_mapaxes_is_mess():
 def test_that_read_egrid_raises_invalid_egrid_file_when_mapaxes_has_too_many_values():
     with pytest.raises(InvalidEgridFileError, match="contained too few elements"):
         CornerpointGrid.read_egrid(write_to_buffer([("MAPAXES ", [1.0])]))
+
+
+def test_that_grid_with_invalid_coord_shape_raises():
+    with pytest.raises(InvalidGridError, match="coord had invalid dimensions"):
+        CornerpointGrid(
+            coord=np.array([], dtype=np.float32),
+            zcorn=np.array([[[[0, 0, 0, 0, 1, 1, 1, 1]]]], dtype=np.float32),
+        )
 
 
 @pytest.mark.parametrize(

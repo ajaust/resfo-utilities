@@ -16,6 +16,10 @@ class InvalidEgridFileError(ValueError):
     pass
 
 
+class InvalidGridError(ValueError):
+    pass
+
+
 @dataclass
 class MapAxes:
     """The axes of the map coordinate system.
@@ -107,6 +111,10 @@ class CornerpointGrid:
     coord: npt.NDArray[np.float32]
     zcorn: npt.NDArray[np.float32]
     map_axes: MapAxes | None = None
+
+    def __post_init__(self) -> None:
+        if len(self.coord.shape) != 4 or self.coord.shape[2:4] != (2, 3):
+            raise InvalidGridError(f"coord had invalid dimensions {self.coord.shape}")
 
     @classmethod
     def read_egrid(cls, file_like: str | os.PathLike[str] | IO[Any]) -> Self:
