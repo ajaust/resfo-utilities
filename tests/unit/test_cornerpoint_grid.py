@@ -11,7 +11,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 from hypothesis import given, assume, example
 import hypothesis.strategies as st
-from hypothesis.extra.numpy import arrays
+from hypothesis.extra.numpy import arrays, from_dtype
 from itertools import product
 
 
@@ -621,15 +621,13 @@ def single_cell_grids(draw):
 
     for i in range(coord.shape[0]):
         for j in range(coord.shape[1]):
-            max_pillar = np.float32(np.max(coord[i, j]) + 0.1)
-            print(np.max(coord[i, j]) + 0.1, max_pillar)
+            bot_pillar_z = np.float32(coord[i, j, 0, 2] + 0.1)
             coord[i, j, 1] = draw(
-                arrays(
-                    np.float32,
-                    (3,),
-                    elements={
+                from_dtype(
+                    np.dtype(np.float32),
+                    **{
                         **nice_elements,
-                        **dict(min_value=max_pillar, max_value=2**14),
+                        **dict(min_value=bot_pillar_z, max_value=2**14),
                     },
                 )
             )
@@ -690,6 +688,28 @@ def single_cell_grids(draw):
     ),
     point=(0.0, 0.0, 0.0),
 ).via("constructed grid with bulging face")
+@example(
+    grid=CornerpointGrid(
+        coord=np.array(
+            [
+                [
+                    [[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]],
+                    [[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]],
+                ],
+                [
+                    [[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]],
+                    [[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]],
+                ],
+            ],
+            dtype=np.float32,
+        ),
+        zcorn=np.array(
+            [[[[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]]], dtype=np.float32
+        ),
+        map_axes=None,
+    ),
+    point=(0.0, 0.0, 9.999999747378752e-06),
+).via("discovered failure")
 def test_that_in_single_cell_grids_found_and_contains_are_the_same(
     grid: CornerpointGrid, point: tuple[float, float, float]
 ):

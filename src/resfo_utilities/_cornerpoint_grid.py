@@ -384,8 +384,12 @@ class CornerpointGrid:
                         z = p[2]
                         # Prune by bounding box first then check whether point_in_cell
                         if (
-                            zcorn.min() - tolerance <= z <= zcorn.max() + tolerance
-                            and self.point_in_cell(p, i, j, k, map_coordinates=False)
+                            zcorn.min() - 2 * tolerance
+                            <= z
+                            <= zcorn.max() + 2 * tolerance
+                            and self.point_in_cell(
+                                p, i, j, k, tolerance=tolerance, map_coordinates=False
+                            )
                         ):
                             prev_ij = (i, j)
                             result.append((i, j, k))
@@ -490,7 +494,7 @@ class CornerpointGrid:
         if map_coordinates and self.map_axes is not None:
             points = self.map_axes.transform_map_points(points)
 
-        vertices = self.cell_corners(i, j, k).astype(np.float64)
+        vertices = self.cell_corners(i, j, k)
 
         corner_signs = np.array(
             [
@@ -526,7 +530,7 @@ class CornerpointGrid:
 
         solutions = []
         for point in points:
-            point = point.astype(np.float64)
+            point = point
             initial_guess = 2 * (point - vertices[0]) / (vertices[6] - vertices[0]) - 1
             initial_guess = np.clip(initial_guess, -1, 1)
             np.nan_to_num(initial_guess, copy=False)
@@ -544,7 +548,7 @@ class CornerpointGrid:
                 solutions.append(
                     bool(
                         np.all(np.abs(sol.x) <= 1.0 + tolerance)
-                        and np.linalg.norm(residual(point)(sol.x)) <= 1e-4 + tolerance
+                        and np.linalg.norm(residual(point)(sol.x)) <= tolerance
                     )
                 )
         return np.array(solutions, dtype=np.bool_)
