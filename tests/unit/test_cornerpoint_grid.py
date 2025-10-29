@@ -606,3 +606,27 @@ def test_point_in_cell_considers_cells_as_trilinear_shapes(bottom_heights, x, y,
     assert grid.point_in_cell([x, y, z], 0, 0, 0, tolerance) == (
         z <= bottom_face_depth(x, y) and in_bounding_box((x, y, z))
     )
+
+
+def test_that_zero_height_pillar_is_invalid():
+    grid = CornerpointGrid(
+        coord=np.array(
+            [
+                [
+                    [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+                    [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+                ],
+                [
+                    [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+                    [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+                ],
+            ],
+            dtype=np.float32,
+        ),
+        zcorn=np.array(
+            [[[[0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0]]]], dtype=np.float32
+        ),
+        map_axes=None,
+    )
+    with pytest.raises(InvalidGridError, match="Grid contains zero height pillars"):
+        grid.cell_corners(0, 0, 0)

@@ -441,7 +441,15 @@ class CornerpointGrid:
         def twice(a: npt.NDArray[Any]) -> npt.NDArray[Any]:
             return np.concatenate([a, a])
 
-        t = (self.zcorn[i, j, k] - twice(top_z)) / twice(bot_z - top_z)
+        height_diff = twice(bot_z - top_z)
+
+        if np.any(height_diff == 0):
+            raise InvalidGridError(
+                f"Grid contains zero height pillars with different for cell {i, j, k}"
+            )
+
+        t = (self.zcorn[i, j, k] - twice(top_z)) / height_diff
+
         result = twice(top) + t[:, np.newaxis] * twice(bot - top)
 
         return result
