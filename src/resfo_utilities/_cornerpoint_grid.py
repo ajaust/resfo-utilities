@@ -425,7 +425,9 @@ class CornerpointGrid:
             return np.concatenate([a, a])
 
         t = (self.zcorn[i, j, k] - twice(top_z)) / twice(bot_z - top_z)
-        return twice(top) + t[:, np.newaxis] * twice(bot - top)
+        result = twice(top) + t[:, np.newaxis] * twice(bot - top)
+
+        return result
 
     def point_in_cell(
         self,
