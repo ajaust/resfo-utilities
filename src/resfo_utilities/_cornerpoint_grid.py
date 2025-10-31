@@ -531,8 +531,12 @@ class CornerpointGrid:
         solutions = []
         for point in points:
             point = point
-            initial_guess = 2 * (point - vertices[0]) / (vertices[7] - vertices[0]) - 1
-            initial_guess = np.clip(initial_guess, -1, 1)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                initial_guess = (
+                    2 * (point - vertices[0]) / (vertices[7] - vertices[0]) - 1
+                )
+                initial_guess = np.clip(initial_guess, -1, 1)
             np.nan_to_num(initial_guess, copy=False)
             sol = scipy.optimize.least_squares(
                 residual(point),
