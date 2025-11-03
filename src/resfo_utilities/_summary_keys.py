@@ -96,7 +96,7 @@ class SummaryKeyType(Enum):
             "W": cls.WELL,
         }
         if not summary_variable:
-            raise ValueError("Got empty summary keyword")
+            raise InvalidSummaryKeyError("Got empty summary keyword")
         if any(special in summary_variable for special in SPECIAL_KEYWORDS):
             return cls.OTHER
         if summary_variable[0] in KEYWORD_TYPE_MAPPING:
