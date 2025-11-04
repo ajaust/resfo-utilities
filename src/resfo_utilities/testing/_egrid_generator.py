@@ -308,11 +308,10 @@ class EGrid:
     """Contains the data of an EGRID file.
 
     Args:
-        file_head: The file header starting with the FILEHEAD keyword
-        global_grid: The global grid
-        lgr_sections: List of local grid refinements.
-        nnc_sections: Describe non-neighboring sections as a list of either
-            NNCSections or AmalgamationSection's.
+        file_head:
+            The file header starting with the FILEHEAD keyword
+        global_grid:
+            The global grid
     """
 
     file_head: Filehead
@@ -325,6 +324,7 @@ class EGrid:
 
     def to_file(self, filelike: str | PathLike[str] | IO[Any]) -> None:
         """write the EGrid to file.
+
         Args:
             filelike (str,Path,stream): The egrid file to write to.
         """

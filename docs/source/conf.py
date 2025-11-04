@@ -17,6 +17,10 @@ nitpick_ignore = [
     ("py:class", "ArrayLike"),
     ("py:class", "npt.NDArray"),
     ("py:class", "np.bool_"),
+    ("py:class", "hypothesis.strategies.SearchStrategy"),
+    ("py:class", "annotated_types.Gt"),
+    ("py:class", "annotated_types.Interval"),
+    ("py:class", "resfo.format.Format"),
 ]
 language = "python"
 html_theme = "sphinx_rtd_theme"

@@ -2,27 +2,6 @@
 Implements a hypothesis strategy for unified summary files
 (.SMSPEC and .UNSMRY)
 See https://opm-project.org/?page_id=955
-
-The basic usage is to generate summaries using the ``summaries``
-strategy::
-
-    from resfo_utilities import SummaryReader
-    from resfo_utilities.testing import summaries
-    from io import BytesIO
-    from hypothesis import given
-
-    @given(summary=summaries())
-    def test_that_the_read_values_matches_those_in_the_input(summary):
-        smspec, unsmry = summary
-        smspec_buf = BytesIO()
-        unsmry_buf = BytesIO()
-        smspec.to_file(smspec_buf)
-        unsmry.to_file(unsmry_buf)
-        smspec_buf.seek(0)
-        unsmry_buf.seek(0)
-
-        summary = SummaryReader(smspec=lambda: smspec_buf, summaries=[lambda: unsmry_buf])
-
 """
 
 from dataclasses import astuple, dataclass
@@ -365,7 +344,7 @@ def smspecs(
     lgr_names: st.SearchStrategy[str] | None = None,
     restart_names: st.SearchStrategy[str] | None = None,
 ) -> Smspec:
-    """Hypothesis strategy for ``Smspec``s."""
+    """Hypothesis strategy for ``Smspec`` s."""
     use_days = st.booleans() if use_days is None else use_days
     use_locals = draw(st.booleans())
     sum_keys_ = draw(sum_keys)

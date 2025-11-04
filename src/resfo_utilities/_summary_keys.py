@@ -1,6 +1,6 @@
 """
-Some applications use a colon separated list of the required properties
-needed to uniquely specify a summary vector.
+Some applications use a colon separated list, called a summarykey,
+of the required properties needed to uniquely specify a summary vector.
 
 What properties are required is specified in `OPM Flow manual`_ section
 F.9.2. Summary variables are described in the `OPM Flow manual`_

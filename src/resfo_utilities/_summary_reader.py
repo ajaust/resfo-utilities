@@ -216,6 +216,7 @@ class SummaryReader:
         self, report_step_only: bool = True
     ) -> Iterator[npt.NDArray[np.float32]]:
         """Iterate over the values for the summary keywords.
+
         Args:
             report_step_only: If ``True``, yield only at report steps (``DATES``).
         Yields:

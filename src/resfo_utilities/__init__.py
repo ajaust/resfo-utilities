@@ -4,7 +4,7 @@ from ._cornerpoint_grid import (
     MapAxes,
     InvalidGridError,
 )
-from ._summary_reader import SummaryReader, InvalidSummaryError
+from ._summary_reader import SummaryReader, InvalidSummaryError, SummaryKeyword
 from ._summary_keys import (
     SummaryKeyType,
     history_key,
@@ -19,6 +19,7 @@ __all__ = [
     "MapAxes",
     "InvalidGridError",
     "SummaryReader",
+    "SummaryKeyword",
     "InvalidSummaryError",
     "SummaryKeyType",
     "history_key",

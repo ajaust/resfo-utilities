@@ -4,7 +4,7 @@ resfo-utilities: A library for working with reservoir simulator output
 
 
 .. toctree::
-   :hidden:
+   :maxdepth: 2
 
    self
    glossary
