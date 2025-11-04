@@ -66,6 +66,10 @@ class SummaryReader:
 
     The result of running a reservoir simulator is a number of time vectors
     which are written to summary files.
+
+    Each file is opened when the corresponding data is requested so asking for
+    the properties of SummaryReader may raise `InvalidSummaryError` if the
+    corresponding file or its content is invalid.
     """
 
     @overload
@@ -113,6 +117,10 @@ class SummaryReader:
                 formatted or unified combination is looked for, ie. if
                 case_path="CASE.UNSMRY" then only "CASE.SMSPEC" and "CASE.UNSMRY"
                 will be opened.
+        Raises:
+            FileNotFoundError:
+                If the required summary files for the given case_path
+                does not exist.
         """
         if case_path is None and (smspec is None or summaries is None):
             raise ValueError(
@@ -160,6 +168,7 @@ class SummaryReader:
 
     @property
     def start_date(self) -> datetime:
+        """The start date of the simulation."""
         if self._start_date is not None:
             return self._start_date
         self._start_date, self._summary_keywords, self._dimensions, self._restart = (
@@ -212,6 +221,10 @@ class SummaryReader:
         Yields:
             arrays of the keyword values in the order of
             the summary_keywords.
+        Raises:
+            InvalidSummaryError:
+                If the summary files cannot be read from or contains invalid
+                contents.
         """
 
         last_params = None
@@ -555,9 +568,7 @@ def _get_summary_filenames(filepath: str | os.PathLike[str]) -> tuple[list[str],
     if len(summary) != len(all_summary):
         warnings.warn(f"More than one type of summary file, found {all_summary}")
     if not summary:
-        raise InvalidSummaryError(
-            f"Could not find any summary files matching {filepath}"
-        )
+        raise FileNotFoundError(f"Could not find any summary files matching {filepath}")
 
     if pat in ("unsmry", r"s\d\d\d\d"):
         spec_candidates = filter_extension("smspec", spec_candidates)
@@ -569,9 +580,7 @@ def _get_summary_filenames(filepath: str | os.PathLike[str]) -> tuple[list[str],
         warnings.warn(f"More than one type of summary spec file, found {spec}")
 
     if not spec:
-        raise InvalidSummaryError(
-            f"Could not find any summary spec matching {filepath}"
-        )
+        raise FileNotFoundError(f"Could not find any summary spec matching {filepath}")
     return summary, spec[-1]
 
 
