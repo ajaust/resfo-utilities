@@ -14,7 +14,6 @@ from hypothesis import given, assume, example
 import hypothesis.strategies as st
 from hypothesis.extra.numpy import arrays, from_dtype
 from itertools import product
-from contextlib import suppress
 
 
 def write_to_buffer(file_contents):
@@ -33,8 +32,7 @@ def test_that_cornerpoint_grid_reads_all_generated_grids(egrid):
     buf = BytesIO()
     egrid.to_file(buf)
     buf.seek(0)
-    with suppress(InvalidEgridFileError):  # for radial grids
-        _ = CornerpointGrid.read_egrid(buf)
+    _ = CornerpointGrid.read_egrid(buf)
 
 
 def test_that_read_egrid_raises_invalid_egrid_file_when_gridhead_is_mess():

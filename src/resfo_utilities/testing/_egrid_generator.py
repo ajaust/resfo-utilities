@@ -371,6 +371,7 @@ _grid_heads = st.builds(
     _indices,
     st.just(1),
     st.just(1),
+    coordinate_type=st.just(CoordinateType.CARTESIAN),
     lgr_start=st.tuples(_indices, _indices, _indices),
     lgr_end=st.tuples(_indices, _indices, _indices),
 )
