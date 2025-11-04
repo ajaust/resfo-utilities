@@ -315,6 +315,7 @@ class EGrid:
     """
 
     file_head: Filehead
+    gridunit: GridUnit
     global_grid: GlobalGrid
 
     @property
@@ -330,6 +331,7 @@ class EGrid:
         """
         contents = []
         contents.append(("FILEHEAD", self.file_head.to_egrid()))
+        contents.append(("GRIDUNIT", self.gridunit.to_egrid()))  # type: ignore
         contents += self.global_grid.to_egrid()
         resfo.write(filelike, contents)
 
