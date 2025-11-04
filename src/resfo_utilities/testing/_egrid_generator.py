@@ -316,7 +316,7 @@ class EGrid:
     """
 
     file_head: Filehead
-    gridunit: GridUnit
+    grid_unit: GridUnit
     global_grid: GlobalGrid
 
     @property
@@ -332,7 +332,7 @@ class EGrid:
         """
         contents = []
         contents.append(("FILEHEAD", self.file_head.to_egrid()))
-        contents.append(("GRIDUNIT", self.gridunit.to_egrid()))  # type: ignore
+        contents.append(("GRIDUNIT", self.grid_unit.to_egrid()))  # type: ignore
         contents += self.global_grid.to_egrid()
         resfo.write(filelike, contents)
 
@@ -402,7 +402,7 @@ def _global_grids(draw: st.DrawFn) -> GlobalGrid:
     )
 
 
-egrids = st.builds(EGrid, _file_heads, _global_grids())
+egrids = st.builds(EGrid, _file_heads, global_grid=_global_grids())
 
 __all__ = [
     "GrdeclKeyword",
