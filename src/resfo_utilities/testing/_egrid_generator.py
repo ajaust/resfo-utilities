@@ -281,12 +281,13 @@ class GlobalGrid:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, GlobalGrid):
             return False
+        if self.actnum is None:
+            return other.actnum is None
+        if other.actnum is None:
+            return self.actnum is None
         return (
             self.grid_head == other.grid_head
-            and (
-                (self.actnum is None and other.actnum is None)
-                or np.array_equal(self.actnum, other.actnum)  # type: ignore
-            )
+            and np.array_equal(self.actnum, other.actnum)
             and np.array_equal(self.coord, other.coord)
             and np.array_equal(self.zcorn, other.zcorn)
         )
