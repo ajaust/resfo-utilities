@@ -285,7 +285,7 @@ def _read_spec(
         and restart case path.
 
     Raises:
-        InvalidSummary: On malformed content (e.g., missing UNITS, STARTDAT, etc.)
+        InvalidSummaryError: On malformed content (e.g., missing UNITS, STARTDAT, etc.)
             or if parsing of the smspec fails.
     """
     start_date = None
