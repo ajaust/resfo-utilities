@@ -12,6 +12,7 @@ intersphinx_mapping = {
 nitpick_ignore = [
     ("py:class", "np.float32"),
     ("py:class", "numpy.float32"),
+    ("py:class", "numpy.int32"),
     ("py:class", "collections.abc.Buffer"),
     ("py:class", "npt.ArrayLike"),
     ("py:class", "ArrayLike"),

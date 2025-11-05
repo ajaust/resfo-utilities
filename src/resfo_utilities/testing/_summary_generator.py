@@ -333,12 +333,14 @@ class Smspec:
 
 _small_ints = from_dtype(np.dtype(np.int32), min_value=1, max_value=10)
 
+_summary_keys = st.lists(summary_variables(), min_size=1)
+
 
 @st.composite
 def smspecs(
     draw: st.DrawFn,
-    sum_keys: st.SearchStrategy[list[str]],
-    start_date: st.SearchStrategy[Date],
+    sum_keys: st.SearchStrategy[list[str]] | None = None,
+    start_date: st.SearchStrategy[Date] | None = None,
     use_days: st.SearchStrategy[bool] | None = None,
     well_names: st.SearchStrategy[str] | None = None,
     lgr_names: st.SearchStrategy[str] | None = None,
@@ -347,7 +349,7 @@ def smspecs(
     """Hypothesis strategy for ``Smspec`` s."""
     use_days = st.booleans() if use_days is None else use_days
     use_locals = draw(st.booleans())
-    sum_keys_ = draw(sum_keys)
+    sum_keys_ = draw(sum_keys or _summary_keys)
     if any(sk.startswith("L") for sk in sum_keys_):
         use_locals = True
     n = len(sum_keys_) + 1
@@ -406,7 +408,7 @@ def smspecs(
             numlz=st.just(numlz),
             region_numbers=st.just(region_numbers),
             units=st.just(units),
-            start_date=start_date,
+            start_date=start_date or st.datetimes().map(Date.from_datetime),
             use_names=st.booleans(),
         )
     )
@@ -485,8 +487,6 @@ _time_delta_lists = st.lists(
     max_size=100,
     unique=True,
 )
-
-_summary_keys = st.lists(summary_variables(), min_size=1)
 
 
 @st.composite

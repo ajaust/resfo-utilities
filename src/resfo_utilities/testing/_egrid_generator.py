@@ -204,9 +204,9 @@ class Filehead:
     content.
     """
 
-    version_number: int
-    year: int
-    version_bound: int
+    version_number: np.int32
+    year: np.int32
+    version_bound: np.int32
     type_of_grid: TypeOfGrid
     rock_model: RockModel
     grid_format: GridFormat
@@ -238,15 +238,15 @@ class GridHead:
     """
 
     type_of_grid: TypeOfGrid
-    num_x: int
-    num_y: int
-    num_z: int
-    grid_reference_number: int
-    numres: int
-    nseg: int
+    num_x: np.int32
+    num_y: np.int32
+    num_z: np.int32
+    grid_reference_number: np.int32
+    numres: np.int32
+    nseg: np.int32
     coordinate_type: CoordinateType
-    lgr_start: tuple[int, int, int]
-    lgr_end: tuple[int, int, int]
+    lgr_start: tuple[np.int32, np.int32, np.int32]
+    lgr_end: tuple[np.int32, np.int32, np.int32]
 
     def to_egrid(self) -> np.ndarray:
         # The data is expected to consist of
@@ -320,7 +320,7 @@ class EGrid:
     global_grid: GlobalGrid
 
     @property
-    def shape(self) -> tuple[int, int, int]:
+    def shape(self) -> tuple[np.int32, np.int32, np.int32]:
         grid_head = self.global_grid.grid_head
         return (grid_head.num_x, grid_head.num_y, grid_head.num_z)
 
@@ -380,7 +380,7 @@ _grid_heads = st.builds(
 @st.composite
 def _global_grids(draw: st.DrawFn) -> GlobalGrid:
     grid_head = draw(_grid_heads)
-    dims = (grid_head.num_x, grid_head.num_y, grid_head.num_z)
+    dims = (int(grid_head.num_x), int(grid_head.num_y), int(grid_head.num_z))
     corner_size = (dims[0] + 1) * (dims[1] + 1) * 6
     coord = arrays(
         shape=corner_size,
