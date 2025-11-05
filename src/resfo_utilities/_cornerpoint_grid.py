@@ -542,9 +542,6 @@ class CornerpointGrid:
                 residual(point),
                 initial_guess,
                 method="trf",
-                xtol=tolerance,
-                ftol=tolerance,
-                gtol=tolerance,
             )
             if not sol.success:
                 solutions.append(False)
