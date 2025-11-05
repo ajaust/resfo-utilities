@@ -8,6 +8,7 @@ import hypothesis.strategies as st
 from contextlib import suppress
 import resfo
 import numpy as np
+import os
 
 
 def test_that_summary_reader_can_be_initialized_with_either_path_or_io(tmp_path: Path):
@@ -146,8 +147,217 @@ def test_missing_keywords_in_smspec_raises_informative_error():
     )
     smspec_buf.seek(0)
 
-    with pytest.raises(
-        InvalidSummaryError,
-        match="Keywords missing",
-    ):
+    with pytest.raises(InvalidSummaryError, match="Keywords missing"):
         read_summary(smspec_buf, BytesIO())
+
+
+def minimal_smspec(
+    keywords=("WOPR    ", "WWPR    "),
+    units=("SM3/DAY ", "SM3/DAY "),
+    nums=(1, 2),
+    startdat=(1, 1, 2000, 0),
+    dimens=None,
+    wgnames=None,
+    names=None,
+    restart=None,
+):
+    arrays = [
+        ("STARTDAT", np.array(startdat, dtype=np.int32)),
+        ("KEYWORDS", list(keywords)),
+        ("UNITS   ", list(units)),
+        ("NUMS    ", np.array(nums, dtype=np.int32)),
+    ]
+    if dimens is not None:
+        arrays.append(("DIMENS  ", np.array(dimens, dtype=np.int32)))
+    if wgnames is not None:
+        arrays.append(("WGNAMES ", list(wgnames)))
+    if names is not None:
+        arrays.append(("NAMES   ", list(names)))
+    if restart is not None:
+        arrays.append(("RESTART ", list(restart)))
+    return arrays
+
+
+def minimal_summary(param_values):
+    arrays = []
+    for is_report, vals in param_values:
+        arrays.append(("PARAMS  ", np.array(vals, dtype=np.float32)))
+        if is_report:
+            arrays.append(("SEQHDR  ", np.array([0], dtype=np.int32)))
+    return arrays
+
+
+def write_resfo_buf(arrays):
+    buf = BytesIO()
+    resfo.write(buf, arrays)
+    buf.seek(0)
+    return buf
+
+
+def test_that_when_case_path_is_formatted_then_formatted_files_are_chosen_over_unformatted(
+    tmp_path: Path,
+):
+    resfo.write(tmp_path / "CASE.FSMSPEC", minimal_smspec(), resfo.Format.FORMATTED)
+    resfo.write(
+        tmp_path / "CASE.FUNSMRY",
+        minimal_summary([(True, [1.0, 2.0])]),
+        resfo.Format.FORMATTED,
+    )
+
+    (tmp_path / "CASE.UNSMRY").write_bytes(b"")
+    (tmp_path / "CASE.SMSPEC").write_bytes(b"")
+
+    reader = SummaryReader(case_path=tmp_path / "CASE.FUNSMRY")
+    assert reader.smspec_filename.endswith("CASE.FSMSPEC")
+    assert list(reader.summary_filenames) == [str(tmp_path / "CASE.FUNSMRY")]
+
+
+def test_that_case_path_without_extension_warns_on_multiple_summary_types_and_picks_first(
+    tmp_path: Path,
+):
+    resfo.write(
+        tmp_path / "CASE.SMSPEC",
+        minimal_smspec(),
+    )
+    resfo.write(
+        tmp_path / "CASE.UNSMRY",
+        minimal_summary([(True, [1.0, 2.0])]),
+    )
+    resfo.write(
+        tmp_path / "CASE.S0001",
+        minimal_summary([(True, [3.0, 4.0])]),
+    )
+    resfo.write(
+        tmp_path / "CASE.FUNSMRY",
+        minimal_summary([(True, [5.0, 6.0])]),
+    )
+
+    with pytest.warns(UserWarning, match="More than one type of summary file"):
+        reader = SummaryReader(case_path=tmp_path / "CASE")
+    # Choose unformatted and  unified first
+    chosen = list(reader.summary_filenames)
+    assert len(chosen) == 1
+    assert chosen[0].endswith("CASE.UNSMRY")
+
+
+def test_that_restart_relative_path_is_made_absolute(tmp_path: Path):
+    resfo.write(
+        tmp_path / "CASE.SMSPEC",
+        minimal_smspec(
+            restart=("restart_",),
+        ),
+    )
+    resfo.write(
+        tmp_path / "CASE.UNSMRY",
+        minimal_summary([(True, [1.0, 2.0])]),
+    )
+    reader = SummaryReader(case_path=tmp_path / "CASE")
+    restart = reader.restart
+    assert restart is not None
+    assert restart.startswith(str(tmp_path))
+    assert restart.endswith("restart_")
+
+
+def test_that_restart_absolute_path_is_preserved(tmp_path: Path):
+    abs_path = os.path.abspath("/some/absolute/restart")
+    resfo.write(
+        tmp_path / "CASE.SMSPEC",
+        minimal_smspec(
+            dimens=(2, 0, 0, 0),
+            restart=(abs_path,),
+        ),
+    )
+    resfo.write(
+        tmp_path / "CASE.UNSMRY",
+        minimal_summary([(True, [1.0, 2.0])]),
+    )
+    reader = SummaryReader(case_path=tmp_path / "CASE")
+    assert reader.restart == abs_path
+
+
+def test_that_missing_dimens_num_keywords_emits_warning_and_uses_keyword_length():
+    keywords = ("WOPR    ", "WWPR    ", "FOPT    ")
+    smspec_buf = write_resfo_buf(
+        minimal_smspec(keywords=keywords, units=("U1", "U2", "U3"))
+    )
+    unsmry_buf = write_resfo_buf(minimal_summary([(True, [1.0, 2.0, 3.0])]))
+    reader = SummaryReader(smspec=lambda: smspec_buf, summaries=[lambda: unsmry_buf])
+    with pytest.warns(
+        UserWarning, match="SMSPEC did not contain num_keywords in DIMENS"
+    ):
+        kws = reader.summary_keywords
+    assert len(kws) == len(keywords)
+
+
+def test_that_num_keywords_is_truncated_when_dimens_value_exceeds_keywords_and_warns():
+    keywords = ("WOPR    ", "WWPR    ")
+    smspec_buf = write_resfo_buf(
+        minimal_smspec(
+            keywords=keywords,
+            units=("U1", "U2"),
+            dimens=(5, 0, 0, 0),  # num_keywords > actual
+        )
+    )
+    unsmry_buf = write_resfo_buf(minimal_summary([(True, [1.0, 2.0])]))
+    reader = SummaryReader(smspec=lambda: smspec_buf, summaries=[lambda: unsmry_buf])
+    with pytest.warns(UserWarning, match="number of keywords given in DIMENS"):
+        kws = reader.summary_keywords
+    assert len(kws) == len(keywords)
+
+
+def test_that_names_alias_is_used_when_wgnames_is_missing():
+    names = ("PROD    ", "INJ     ")
+    smspec_buf = write_resfo_buf(
+        minimal_smspec(
+            wgnames=None,
+            names=names,
+            dimens=(2, 0, 0, 0),
+        )
+    )
+    unsmry_buf = write_resfo_buf(minimal_summary([(True, [1.0, 2.0])]))
+    reader = SummaryReader(smspec=lambda: smspec_buf, summaries=[lambda: unsmry_buf])
+    kws = reader.summary_keywords
+    assert [kw.name for kw in kws] == [n.strip() for n in names]
+
+
+def test_that_wgnames_is_used_for_keyword_names():
+    wgnames = ("PROD_A  ", "PROD_B  ")
+    smspec_buf = write_resfo_buf(
+        minimal_smspec(
+            wgnames=wgnames,
+            names=None,
+            dimens=(2, 0, 0, 0),
+        )
+    )
+    unsmry_buf = write_resfo_buf(minimal_summary([(True, [1.0, 2.0])]))
+    reader = SummaryReader(smspec=lambda: smspec_buf, summaries=[lambda: unsmry_buf])
+    kws = reader.summary_keywords
+    assert [kw.name for kw in kws] == [n.strip() for n in wgnames]
+
+
+def test_that_values_iterates_all_param_entries_when_report_step_only_is_false():
+    smspec_buf = write_resfo_buf(minimal_smspec(dimens=(2, 0, 0, 0)))
+    param_values = [
+        (True, [1.0, 10.0]),
+        (False, [2.0, 20.0]),
+        (True, [3.0, 30.0]),
+    ]
+    unsmry_buf = write_resfo_buf(minimal_summary(param_values))
+    reader = SummaryReader(smspec=lambda: smspec_buf, summaries=[lambda: unsmry_buf])
+    all_vals = list(reader.values(report_step_only=False))
+    assert len(all_vals) == 3
+    assert [v.tolist() for v in all_vals] == [[1.0, 10.0], [2.0, 20.0], [3.0, 30.0]]
+
+
+def test_that_values_iterates_only_report_steps_when_report_step_only_true():
+    smspec_buf = write_resfo_buf(minimal_smspec(dimens=(2, 0, 0, 0)))
+    param_values = [
+        (True, [1.0, 10.0]),
+        (False, [2.0, 20.0]),
+        (True, [3.0, 30.0]),
+    ]
+    unsmry_buf = write_resfo_buf(minimal_summary(param_values))
+    reader = SummaryReader(smspec=lambda: smspec_buf, summaries=[lambda: unsmry_buf])
+    report_vals = list(reader.values(report_step_only=True))
+    assert len(report_vals) == 2
+    assert [v.tolist() for v in report_vals] == [[1.0, 10.0], [3.0, 30.0]]
