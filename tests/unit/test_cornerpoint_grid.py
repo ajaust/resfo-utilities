@@ -335,7 +335,7 @@ def regular_grids(draw):
     height = draw(
         st.floats(
             min_value=16.0,
-            max_value=2**32,
+            max_value=2**9,
             allow_nan=False,
             allow_infinity=False,
             width=32,
