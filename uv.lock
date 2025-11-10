@@ -747,15 +747,15 @@ wheels = [
 
 [[package]]
 name = "resfo"
-version = "5.0.0b1"
+version = "5.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/80/6d/72eeafb6aacdf3855decc854d1ee6f63b7b65104038b30ae3e491f4c3f40/resfo-5.0.0b1.tar.gz", hash = "sha256:d6dfa4f1e05a7b1f31b980121eb87956de27a93e791598d3cfe916e5fdd24955", size = 30801 }
+sdist = { url = "https://files.pythonhosted.org/packages/03/b6/4e40c2fe8fd788ba26ca5106323d09be5da281174fc4fe1cd5d5ef0251d1/resfo-5.0.0.tar.gz", hash = "sha256:c696d9fff01573cba5bc50044fe11e1df857442d8ca1303bee4e31b2ec3456b3", size = 30847 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6e/ec/2854ab2bf5fa6a72b6b5054f389a9ac32a17ef1d1c0100a61d7cef7ed7cc/resfo-5.0.0b1-py3-none-any.whl", hash = "sha256:faf084dbbb88acc1d3617c77c396f6eed9306651454244dc8742a1205dd816da", size = 19511 },
+    { url = "https://files.pythonhosted.org/packages/ad/02/32dc4353f080a43ad978f29ddff6db22275dba7b7ba0eabd81513f941a24/resfo-5.0.0-py3-none-any.whl", hash = "sha256:1f99c65a0f7a58d9bb678402a9a654e4f6f062b2483f5037dc1fada3de763d4f", size = 19527 },
 ]
 
 [[package]]
@@ -795,7 +795,7 @@ requires-dist = [
     { name = "pydantic", marker = "extra == 'testing'" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "pytest-benchmark", marker = "extra == 'dev'" },
-    { name = "resfo", specifier = ">=5.0.0b1" },
+    { name = "resfo", specifier = ">=5.0.0" },
     { name = "scipy" },
     { name = "scipy-stubs", marker = "extra == 'dev'" },
     { name = "sphinx", marker = "extra == 'doc'" },
