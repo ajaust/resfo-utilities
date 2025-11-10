@@ -172,10 +172,10 @@ class CornerpointGrid:
 
             def validate_array(
                 name: str,
-                array: npt.NDArray[T] | resfo.MESS,
+                array: npt.NDArray[T] | resfo.MessType,
                 min_length: int | None = None,
             ) -> npt.NDArray[T]:
-                if array is resfo.MESS or isinstance(array, resfo.MESS):
+                if isinstance(array, resfo.MessType):
                     raise InvalidEgridFileError(
                         f"Expected Array for keyword {name} in {filename} but got MESS"
                     )

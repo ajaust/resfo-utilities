@@ -371,7 +371,7 @@ def _read_spec(
         raise InvalidSummaryError(
             f"Could not read from summary spec {err.filename}: {err.strerror}"
         ) from err
-    except resfo.resfo.ResfoParsingError as err:
+    except resfo.ResfoParsingError as err:
         raise InvalidSummaryError(
             f"Summary spec contained invalid contents: {err}"
         ) from err
@@ -456,9 +456,9 @@ def _read_spec(
 
 
 def _validate_array(
-    kw: str, filename: str, vals: npt.NDArray[Any] | resfo.MESS
+    kw: str, filename: str, vals: npt.NDArray[Any] | resfo.MessType
 ) -> npt.NDArray[Any]:
-    if vals is resfo.MESS or isinstance(vals, resfo.MESS):
+    if isinstance(vals, resfo.MessType):
         raise InvalidSummaryError(f"{kw.strip()} in {filename} has incorrect type MESS")
     return vals
 
