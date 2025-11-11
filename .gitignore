@@ -41,6 +41,9 @@ scratch.sparsebundle
 ## pip install without -e
 /build
 
+# Built docs folder
+/docs/output
+
 # cache folder for hypothesis framework
 .hypothesis
 
