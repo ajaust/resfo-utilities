@@ -334,26 +334,13 @@ class CornerpointGrid:
                 )
 
             @cached_property
-            def min_x(self) -> np.float32:
-                return self.vertices[:, 0].min()
-
-            @cached_property
-            def min_y(self) -> np.float32:
-                return self.vertices[:, 1].min()
-
-            @cached_property
-            def max_x(self) -> np.float32:
-                return self.vertices[:, 0].max()
-
-            @cached_property
-            def max_y(self) -> np.float32:
-                return self.vertices[:, 1].max()
-
-            @cached_property
             def distance_from_bounds(self) -> np.float32:
                 """Manhattan distance from the point to the quad bounding box."""
-                x_dist = max(self.min_x - self.p[0], self.p[0] - self.max_x, 0)
-                y_dist = max(self.min_y - self.p[1], self.p[1] - self.max_y, 0)
+                vertices = self.vertices
+                min_x, min_y = vertices.min(axis=0)
+                max_x, max_y = vertices.max(axis=0)
+                x_dist = max(min_x - self.p[0], self.p[0] - max_x, 0)
+                y_dist = max(min_y - self.p[1], self.p[1] - max_y, 0)
                 return x_dist + y_dist
 
             def __lt__(self, other: object) -> bool:
