@@ -407,10 +407,14 @@ class CornerpointGrid:
                 # Add each neighbour to the queue if not visited
                 size_i = node.i_neighbourhood
                 for di in (-1 * size_i, 0, size_i):
-                    ni = np.clip(i + di, 0, dims[0] - 1)
+                    ni = i + di
+                    if ni < 0 or ni >= dims[0]:
+                        continue
                     size_j = node.j_neighbourhood
                     for dj in (-1 * size_j, 0, size_j):
-                        nj = np.clip(j + dj, 0, dims[1] - 1)
+                        nj = j + dj
+                        if nj < 0 or nj >= dims[1]:
+                            continue
                         if (ni, nj) not in visited:
                             heapq.heappush(
                                 queue,
