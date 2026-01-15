@@ -300,6 +300,49 @@ def test_that_reader_handles_multiple_data_arrays():
     assert len(entry) == 3
 
 
+def test_that_extra_values_in_well_etc_are_ignored():
+    well_etc = np.array(
+        [
+            b"DAYS    ",
+            b"WELL1   ",
+            b"        ",
+            b"METRES  ",
+            b"BARSA   ",
+            b"        ",
+            b"STANDARD",
+            b"SM3/DAY ",
+            b"SM3/DAY ",
+            b"RM3/DAY ",
+            b"        ",
+            b"M/SEC   ",
+            b"CP      ",
+            b"KG/SM3  ",
+            b"KG/DAY  ",
+            b"KG/KG   ",
+            b"        ",
+            b"        ",
+        ],
+    )
+    buffer = write_rft_to_buffer(
+        [
+            ("TIME", np.array([1.0])),
+            ("DATE", np.array([1, 1, 2000])),
+            ("WELLETC", well_etc),
+            ("CONIPOS", np.array([1])),
+            ("CONJPOS", np.array([1])),
+            ("CONKPOS", np.array([1])),
+            ("PRESSURE", np.array([100.0])),
+        ],
+    )
+    reader = RFTReader(buffer)
+    entries = list(reader)
+
+    assert len(entries) == 1
+    entry = entries[0]
+
+    assert entry.absorbed_polymer_concentration_units == "KG/KG"
+
+
 def test_that_context_manager_closes_stream_on_exception():
     buffer = write_rft_to_buffer([("TIME", np.array([1.0]))])
     with pytest.raises(InvalidRFTError), RFTReader(buffer) as reader:

@@ -321,7 +321,7 @@ class RFTReader(Iterable[RFTEntry]):
                         time_since_start,
                         date,
                         np.column_stack((values[2], values[3], values[4])),
-                        *well_etc[1:],
+                        *well_etc[1 : min(len(well_etc), 15)],
                     )
                     incomplete_entry = False
                     elem = next(array_iterator)
