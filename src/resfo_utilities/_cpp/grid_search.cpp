@@ -89,26 +89,9 @@ std::optional<CellIndex> grid_search_interval_tree(
         return std::nullopt;
     }
 
-    //auto intersection = pillar_z_intersection(coord, dims, p[2]);
-
-    //std::priority_queue<QuadNode, std::vector<QuadNode>, std::greater<QuadNode>> queue;
-    //std::unordered_set<std::pair<int, int>, PairHash> visited;
-
-    //if (prev_ij.has_value()) {
-    //    queue.emplace(prev_ij->first, prev_ij->second, p, 1, 1, intersection, dims);
-    //} else {
-    //    queue.emplace(dims.ni / 2, dims.nj / 2, p, dims.ni / 2, dims.nj / 2, intersection,
-    //                  dims);
-    //}
-
-    //visited.insert({queue.top().i, queue.top().j});
-
     auto candidates = tree.query(p[0], p[1], bound_tol);
 
-    //while (!queue.empty()) {
     for (const auto& cell : candidates) {
-        //QuadNode node = queue.top();
-        //queue.pop();
 
         int i = cell.i;
         int j = cell.j;
@@ -125,24 +108,6 @@ std::optional<CellIndex> grid_search_interval_tree(
                 }
             }
         }
-
-        //int size_i = node.i_neighbourhood;
-        //for (int di : {-1 * size_i, -1, 0, 1, size_i}) {
-        //    int ni = i + di;
-        //    if (ni < 0 || ni >= dims.ni) continue;
-
-        //    int size_j = node.j_neighbourhood;
-        //    for (int dj : {-1 * size_j, -1, 0, 1, size_j}) {
-        //        int nj = j + dj;
-        //        if (nj < 0 || nj >= dims.nj) continue;
-
-        //        if (visited.find({ni, nj}) == visited.end()) {
-        //            queue.emplace(ni, nj, p, std::max(size_i / 2, 1), std::max(size_j / 2, 1),
-        //                          intersection, dims);
-        //            visited.insert({ni, nj});
-        //        }
-        //    }
-        //}
     }
 
     return std::nullopt;
