@@ -450,7 +450,6 @@ def test_that_map_coordinates_parameter_sets_the_coordinate_system_for_points():
     # By default points are in the map coordinate system
     assert grid.find_cell_containing_point(point) == [(0, 0, 0)]
 
-    breakpoint()
     assert grid.find_cell_containing_point(point, map_coordinates=False) == [None]
 
 

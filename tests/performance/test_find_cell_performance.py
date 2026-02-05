@@ -30,6 +30,7 @@ def test_benchmark_find_cell(large_regular_grid, benchmark):
 
     benchmark(run)
 
+
 def test_benchmark_find_cell_but_point_outside(large_regular_grid, benchmark):
     def run():
         assert large_regular_grid.find_cell_containing_point(
@@ -37,6 +38,7 @@ def test_benchmark_find_cell_but_point_outside(large_regular_grid, benchmark):
         ) == [None for i, j in product(range(10), range(10))]
 
     benchmark(run)
+
 
 def test_benchmark_find_cell_interval_tree(large_regular_grid, benchmark):
     def run():
@@ -46,7 +48,11 @@ def test_benchmark_find_cell_interval_tree(large_regular_grid, benchmark):
 
     benchmark(run)
 
-def test_benchmark_find_cell_interval_tree_but_point_outside(large_regular_grid, benchmark):
+
+def test_benchmark_find_cell_interval_tree_but_point_outside(
+    large_regular_grid,
+    benchmark,
+):
     def run():
         assert large_regular_grid.find_cell_containing_point_interval_tree(
             [(i + 125.5, j + 125.5, 20.5) for i, j in product(range(10), range(10))],
