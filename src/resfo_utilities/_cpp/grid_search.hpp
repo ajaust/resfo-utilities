@@ -8,21 +8,10 @@
 
 #include <Eigen/Dense>
 
+#include "interval_tree.hpp"
+#include "grid.hpp"
+
 namespace resfo {
-
-const int NUM_CORNERS = 8;
-
-struct GridDimensions {
-    int ni;
-    int nj;
-    int nk;
-};
-
-struct CellIndex {
-    int i;
-    int j;
-    int k;
-};
 
 struct PairHash {
     std::size_t operator()(const std::pair<int, int>& p) const {
@@ -127,5 +116,10 @@ std::optional<CellIndex> grid_search(
     const Eigen::Vector3d& p, const float* coord, const float* zcorn, const GridDimensions& dims,
     const std::vector<float>& top, const std::vector<float>& bot, float tolerance,
     std::optional<std::pair<int, int>> prev_ij);
+
+std::optional<CellIndex> grid_search_interval_tree(
+    const Eigen::Vector3d& p, const float* coord, const float* zcorn, const GridDimensions& dims,
+    const std::vector<float>& top, const std::vector<float>& bot, float tolerance,
+    const IntervalTree2D& tree);
 
 }  // namespace resfo
