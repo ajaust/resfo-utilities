@@ -116,6 +116,12 @@ private:
     }
 
     void updateAugmentedData(int parent, int child) {
+        if (child >= this->tree.size()) {
+            throw std::runtime_error("Child index out of bounds during augmented data update");
+        }
+        if (parent >= this->tree.size()) {
+            throw std::runtime_error("Parent index out of bounds during augmented data update");
+        }
         this->tree[parent].max_x = std::max(this->tree[parent].max_x, this->tree[child].max_x);
         this->tree[parent].min_y = std::min(this->tree[parent].min_y, this->tree[child].min_y);
         this->tree[parent].max_y = std::max(this->tree[parent].max_y, this->tree[child].max_y);
@@ -434,7 +440,7 @@ std::vector<std::optional<std::tuple<int, int, int>>> find_cells_containing_poin
         static_cast<int>(zcorn_shape[2])
     };
     auto bboxes = create_bounding_boxes(coord, zcorn, dims);
-    auto interval_tree = FlatIntervalTree2D(std::move(bboxes));
+    //auto interval_tree = FlatIntervalTree2D(std::move(bboxes));
 
     auto [z_min, z_max] = std::minmax_element(zcorn, zcorn + zcorn_buf.size);
 
@@ -501,7 +507,6 @@ py::array_t<bool> point_in_cell_wrapper(
         static_cast<int>(zcorn_shape[1]),
         static_cast<int>(zcorn_shape[2])
     };
-    create_bounding_boxes(coord, zcorn, dims);
 
     size_t num_points = points_buf.shape[0];
     auto result = py::array_t<bool>(num_points);
