@@ -120,7 +120,6 @@ std::vector<std::optional<std::tuple<int, int, int>>> find_cells_containing_poin
         auto end = std::chrono::high_resolution_clock::now();
         //std::chrono::milliseconds duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-        //std::cout << "Building tree took " << duration.count() << " milliseconds." << std::endl;
         }
 
     auto [z_min, z_max] = std::minmax_element(zcorn, zcorn + zcorn_buf.size);

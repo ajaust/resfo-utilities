@@ -50,38 +50,46 @@ private:
             : median_x(median), overlapping(std::move(boxes)) {}
     };
 
+
     std::unique_ptr<Node> root;
 
     static double median_of(std::vector<double>& values);
 
-    static std::unique_ptr<Node> build(std::vector<BoundingBox>& boxes);
+    static std::unique_ptr<Node> build(std::vector<BoundingBox> boxes);
 
-    static void query(const Node* node, double x0, double y0, std::vector<BoundingBox>& results);
+    static void query(const Node* node, double x0, double y0, std::vector<CellIndex>& results);
 
 public:
     IntervalTree2D() = default;
 
     explicit IntervalTree2D(std::vector<BoundingBox> boxes) {
-        root = build(boxes);
+        root = build(std::move(boxes));
     }
 
-    std::vector<BoundingBox> query(double x0, double y0) const {
-        std::vector<BoundingBox> results;
+    //std::vector<BoundingBox> query(double x0, double y0) const {
+    //    std::vector<BoundingBox> results;
+    //    query(root.get(), x0, y0, results);
+    //    return results;
+    //}
+
+    std::vector<CellIndex> query(double x0, double y0) const {
+        std::vector<CellIndex> results;
+        results.reserve(30);
         query(root.get(), x0, y0, results);
         return results;
     }
 
-    std::vector<resfo::CellIndex> query_cells(double x0, double y0) const {
-        std::vector<BoundingBox> tmp;
-        query(root.get(), x0, y0, tmp);
+    //std::vector<resfo::CellIndex> query_cells(double x0, double y0) const {
+    //    std::vector<BoundingBox> tmp;
+    //    query(root.get(), x0, y0, tmp);
 
-        std::vector<resfo::CellIndex> results;
-        results.reserve(tmp.size());
-        for (const auto& box : tmp) {
-            results.push_back(box.cell_index);
-        }
-        return results;
-    }
+    //    std::vector<resfo::CellIndex> results;
+    //    results.reserve(tmp.size());
+    //    for (const auto& box : tmp) {
+    //        results.push_back(box.cell_index);
+    //    }
+    //    return results;
+    //}
 };
 
 } /* namespace resfo */

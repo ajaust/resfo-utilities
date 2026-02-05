@@ -24,7 +24,7 @@ double IntervalTree2D::median_of(std::vector<double>& values) {
     return values[n / 2];
 }
 
-std::unique_ptr<IntervalTree2D::Node> IntervalTree2D::build(std::vector<BoundingBox>& boxes) {
+std::unique_ptr<IntervalTree2D::Node> IntervalTree2D::build(std::vector<BoundingBox> boxes) {
     if (boxes.empty()) return nullptr;
 
     // Compute median of interval midpoints on x
@@ -51,12 +51,12 @@ std::unique_ptr<IntervalTree2D::Node> IntervalTree2D::build(std::vector<Bounding
               });
 
     auto node = std::make_unique<IntervalTree2D::Node>(median, std::move(overlapping));
-    node->left = build(left);
-    node->right = build(right);
+    node->left = build(std::move(left));
+    node->right = build(std::move(right));
     return node;
 }
 
-void IntervalTree2D::query(const IntervalTree2D::Node* node, double x0, double y0, std::vector<BoundingBox>& results) {
+void IntervalTree2D::query(const IntervalTree2D::Node* node, double x0, double y0, std::vector<CellIndex>& results) {
     if (!node) return;
 
     if (x0 < node->median_x) {
@@ -69,7 +69,7 @@ void IntervalTree2D::query(const IntervalTree2D::Node* node, double x0, double y
     // but here we do a simple linear scan for clarity
     for (const auto& box : node->overlapping) {
         if (box.min_y <= y0 && y0 <= box.max_y && box.min_x <= x0 && x0 <= box.max_x) {
-            results.push_back(box);
+            results.push_back(box.cell_index);
         }
     }
 }
