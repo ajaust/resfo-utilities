@@ -103,7 +103,7 @@ std::optional<CellIndex> grid_search_interval_tree(
 
     //visited.insert({queue.top().i, queue.top().j});
 
-    auto candidates = tree.query(p[0], p[1]);
+    auto candidates = tree.query(p[0], p[1], bound_tol);
 
     //while (!queue.empty()) {
     for (const auto& cell : candidates) {

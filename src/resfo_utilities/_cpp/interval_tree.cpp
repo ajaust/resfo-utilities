@@ -68,15 +68,15 @@ int IntervalTree2D::build(std::vector<BoundingBox>& boxes) {
 }
 
 
-void IntervalTree2D::query(int node_index, double x0, double y0, std::vector<CellIndex>& results) const {
+void IntervalTree2D::query(int node_index, double x0, double y0, double tolerance, std::vector<CellIndex>& results) const {
     if (node_index == -1) return;
 
     const Node& node = nodes[node_index];
 
     if (x0 < node.median_x) {
-        query(node.left, x0, y0, results);
+        query(node.left, x0, y0, tolerance, results);
     } else if (x0 > node.median_x) {
-        query(node.right, x0, y0, results);
+        query(node.right, x0, y0, tolerance, results);
     }
 
     // Binary search on overlapping_by_min_y to find intervals with min_y <= y0
@@ -89,7 +89,7 @@ void IntervalTree2D::query(int node_index, double x0, double y0, std::vector<Cel
     // Check candidates in [v.begin(), it)
     for (auto iter = v.begin(); iter != it; ++iter) {
         const auto& box = *iter;
-        if (box.max_y >= y0 && box.min_x <= x0 && x0 <= box.max_x) {
+        if (box.max_y + tolerance >= y0 && box.min_x - tolerance <= x0 && x0 <= box.max_x + tolerance) {
             results.push_back(box.cell_index);
         }
     }

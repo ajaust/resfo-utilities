@@ -55,7 +55,7 @@ private:
 
     int build(std::vector<BoundingBox>& boxes);
 
-    void query(int node_index, double x0, double y0, std::vector<CellIndex>& results) const;
+    void query(int node_index, double x0, double y0, double tolerance, std::vector<CellIndex>& results) const;
 
 
 public:
@@ -65,10 +65,10 @@ public:
         root_index = build(boxes);
     }
 
-    std::vector<CellIndex> query(double x0, double y0) const {
+    std::vector<CellIndex> query(double x0, double y0, double tolerance = 1.e-6) const {
         std::vector<CellIndex> results;
         results.reserve(30);
-        this->query(this->root_index, x0, y0, results);
+        this->query(this->root_index, x0, y0, tolerance, results);
         return results;
     }
 };
