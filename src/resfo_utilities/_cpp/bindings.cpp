@@ -95,7 +95,10 @@ private:
     void build(const std::vector<BoundingBox>& boxes, int node, int start, int end) {
         int mid = start + (end - start) / 2;
 
-        tree[node] = {boxes[mid], boxes[mid].max_x, boxes[mid].min_y, boxes[mid].max_y};
+        if (node >= this->tree.size()) {
+            throw std::runtime_error("Node index out of bounds during tree build");
+        }
+        this->tree[node] = {boxes[mid], boxes[mid].max_x, boxes[mid].min_y, boxes[mid].max_y};
 
         if (start == end) return;
 
@@ -113,9 +116,9 @@ private:
     }
 
     void updateAugmentedData(int parent, int child) {
-        tree[parent].max_x = std::max(tree[parent].max_x, tree[child].max_x);
-        tree[parent].min_y = std::min(tree[parent].min_y, tree[child].min_y);
-        tree[parent].max_y = std::max(tree[parent].max_y, tree[child].max_y);
+        this->tree[parent].max_x = std::max(this->tree[parent].max_x, this->tree[child].max_x);
+        this->tree[parent].min_y = std::min(this->tree[parent].min_y, this->tree[child].min_y);
+        this->tree[parent].max_y = std::max(this->tree[parent].max_y, this->tree[child].max_y);
     }
 
     void queryUtil(int node, int start, int end, double x, double y, std::vector<resfo::CellIndex>& results) const {
