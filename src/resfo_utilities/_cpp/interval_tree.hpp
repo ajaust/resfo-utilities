@@ -43,53 +43,34 @@ private:
     struct Node {
         double median_x;
         std::vector<BoundingBox> overlapping; // sorted by min_y
-        std::unique_ptr<Node> left;
-        std::unique_ptr<Node> right;
-
-        Node(double median, std::vector<BoundingBox>&& boxes)
-            : median_x(median), overlapping(std::move(boxes)) {}
+        int left = -1;   // index of left child in nodes vector, -1 if none
+        int right = -1;  // index of right child
     };
 
+    int root_index = -1;
 
-    std::unique_ptr<Node> root;
+    std::vector<Node> nodes;
 
     static double median_of(std::vector<double>& values);
 
-    static std::unique_ptr<Node> build(std::vector<BoundingBox> boxes);
+    int build(std::vector<BoundingBox>& boxes);
 
-    static void query(const Node* node, double x0, double y0, std::vector<CellIndex>& results);
+    void query(int node_index, double x0, double y0, std::vector<CellIndex>& results) const;
+
 
 public:
     IntervalTree2D() = default;
 
     explicit IntervalTree2D(std::vector<BoundingBox> boxes) {
-        root = build(std::move(boxes));
+        root_index = build(boxes);
     }
-
-    //std::vector<BoundingBox> query(double x0, double y0) const {
-    //    std::vector<BoundingBox> results;
-    //    query(root.get(), x0, y0, results);
-    //    return results;
-    //}
 
     std::vector<CellIndex> query(double x0, double y0) const {
         std::vector<CellIndex> results;
         results.reserve(30);
-        query(root.get(), x0, y0, results);
+        this->query(this->root_index, x0, y0, results);
         return results;
     }
-
-    //std::vector<resfo::CellIndex> query_cells(double x0, double y0) const {
-    //    std::vector<BoundingBox> tmp;
-    //    query(root.get(), x0, y0, tmp);
-
-    //    std::vector<resfo::CellIndex> results;
-    //    results.reserve(tmp.size());
-    //    for (const auto& box : tmp) {
-    //        results.push_back(box.cell_index);
-    //    }
-    //    return results;
-    //}
 };
 
 } /* namespace resfo */
