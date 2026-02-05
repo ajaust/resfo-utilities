@@ -314,19 +314,19 @@ std::vector<BoundingBox> create_bounding_boxes(const float* coord, const float* 
                     boxes[i][j][k] = BoundingBox({i, j, k}, corners);
                 }
 
-                if (i < 2 and j < 2 and k < 1) {
-                    std::cout << "Cell (" << i << ", " << j << ", " << k << ") corners:\n";
-                    for (int v = 0; v < resfo::NUM_CORNERS; ++v) {
-                        std::cout << "Corner " << v << ": ("
-                            << corners[v * 3] << ", "
-                            << corners[v * 3 + 1] << ", "
-                            << corners[v * 3 + 2] << ")\n";
-                    }
-                    std::cout << "Bounding box" << std::endl;
-                    std::cout << boxes[i][j][k] << std::endl;
+                //if (i < 2 and j < 2 and k < 1) {
+                //    std::cout << "Cell (" << i << ", " << j << ", " << k << ") corners:\n";
+                //    for (int v = 0; v < resfo::NUM_CORNERS; ++v) {
+                //        std::cout << "Corner " << v << ": ("
+                //            << corners[v * 3] << ", "
+                //            << corners[v * 3 + 1] << ", "
+                //            << corners[v * 3 + 2] << ")\n";
+                //    }
+                //    std::cout << "Bounding box" << std::endl;
+                //    std::cout << boxes[i][j][k] << std::endl;
 
-                    getchar();
-                }
+                //    getchar();
+                //}
             }
         }
     }
