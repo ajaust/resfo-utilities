@@ -336,19 +336,20 @@ private:
 
 //std::vector<std::vector<std::vector<BoundingBox>>> create_bounding_boxes(const float* coord, const float* zcorn,const resfo::GridDimensions& dims) {
 std::vector<BoundingBox> create_bounding_boxes(const float* coord, const float* zcorn,const resfo::GridDimensions& dims) {
-    std::cout << "Grid dimensions: " << dims.ni << " " << dims.nj << " " << dims.nk << "\n";
+    //std::cout << "Grid dimensions: " << dims.ni << " " << dims.nj << " " << dims.nk << "\n";
 
     //std::vector<std::vector<std::vector<BoundingBox>>> boxes(
     //    dims.ni, std::vector<std::vector<BoundingBox>>(
     //        dims.nj, std::vector<BoundingBox>(dims.nk, BoundingBox())
     //    )
     //);
-    std::vector<BoundingBox> boxes(
+    std::vector<BoundingBox> boxes;
+    boxes.reserve(
         dims.ni * dims.nj * dims.nk
     );
-    Eigen::TensorMap<Eigen::Tensor<BoundingBox, 3>> mapped_tensor(
-        boxes.data(), dims.ni, dims.nj, dims.nk
-    );
+    //Eigen::TensorMap<Eigen::Tensor<BoundingBox, 3>> mapped_tensor(
+    //    boxes.data(), dims.ni, dims.nj, dims.nk
+    //);
 
     // Placeholder function to avoid linker errors if needed
     for (int i = 0; i < dims.ni; ++i) {
@@ -361,7 +362,8 @@ std::vector<BoundingBox> create_bounding_boxes(const float* coord, const float* 
                 auto corners = resfo::cell_corners(i, j, k, coord, zcorn, dims);
                 {
                     //mapped_tensor[i][j][k] = BoundingBox({i, j, k}, corners);
-                    mapped_tensor(i, j, k) = BoundingBox({i, j, k}, corners);
+                    //mapped_tensor(i, j, k) = BoundingBox({i, j, k}, corners);
+                    boxes.emplace_back(BoundingBox({i, j, k}, corners));
                 }
 
                 //if (i < 2 and j < 2 and k < 1) {

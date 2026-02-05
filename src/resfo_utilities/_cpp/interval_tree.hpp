@@ -10,21 +10,13 @@ namespace resfo {
 struct BoundingBox {
     resfo::CellIndex cell_index;
 
-    double min_x;
-    double min_y;
-    double max_x;
-    double max_y;
+    double min_y = std::numeric_limits<double>::max();
+    double min_x = std::numeric_limits<double>::max();
 
-    BoundingBox() : cell_index({-1, -1, -1}) {
-        this->min_y = std::numeric_limits<double>::max();
-        this->min_x = std::numeric_limits<double>::max();
+    double max_y = std::numeric_limits<double>::lowest();
+    double max_x = std::numeric_limits<double>::lowest();
 
-        this->max_y = std::numeric_limits<double>::lowest();
-        this->max_x = std::numeric_limits<double>::lowest();
-    }
-
-    BoundingBox(resfo::CellIndex cell_index_, const std::vector<double>& corners) : BoundingBox() {
-        this->cell_index = cell_index_;
+    BoundingBox(resfo::CellIndex cell_index_, const std::vector<double>& corners) : cell_index(std::move(cell_index_)) {
         for (int v = 0; v < resfo::NUM_CORNERS; v += 3) {
             const double& x = corners[v];
             const double& y = corners[v + 1];
@@ -33,10 +25,6 @@ struct BoundingBox {
 
             this->max_x = std::max(this->max_x, x);
             this->max_y = std::max(this->max_y, y);
-            //std::cout << "Corner " << v << ": ("
-            //    << corners[v * 3] << ", "
-            //    << corners[v * 3 + 1] << ", "
-            //    << corners[v * 3 + 2] << ")\n";
         }
     }
 
