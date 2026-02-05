@@ -42,13 +42,13 @@ class IntervalTree2D {
 private:
     struct Node {
         double median_x;
-        std::vector<BoundingBox> overlapping; // sorted by min_y
-        int left = -1;   // index of left child in nodes vector, -1 if none
-        int right = -1;  // index of right child
+        std::vector<BoundingBox> overlapping_by_min_y; // sorted by min_y ascending
+        std::vector<BoundingBox> overlapping_by_max_y; // sorted by max_y ascending
+        int left = -1;
+        int right = -1;
     };
 
     int root_index = -1;
-
     std::vector<Node> nodes;
 
     static double median_of(std::vector<double>& values);
