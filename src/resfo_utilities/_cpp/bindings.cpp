@@ -13,6 +13,7 @@
 #include <Eigen/Dense>
 namespace py = pybind11;
 
+std::unique_ptr<resfo::IntervalTree2D> interval_tree = nullptr;
 
 std::vector<std::optional<std::tuple<int, int, int>>> find_cells_containing_points(
     py::array_t<float, py::array::c_style | py::array::forcecast> points_array,
@@ -111,14 +112,16 @@ std::vector<std::optional<std::tuple<int, int, int>>> find_cells_containing_poin
         static_cast<int>(zcorn_shape[1]),
         static_cast<int>(zcorn_shape[2])
     };
-    auto start = std::chrono::high_resolution_clock::now();
-    auto bboxes = resfo::create_bounding_boxes(coord, zcorn, dims);
-    //auto interval_tree = FlatIntervalTree2D(std::move(bboxes));
-    auto interval_tree = resfo::IntervalTree2D(std::move(bboxes));
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::milliseconds duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    if (not interval_tree) {
+        auto start = std::chrono::high_resolution_clock::now();
+        auto bboxes = resfo::create_bounding_boxes(coord, zcorn, dims);
+        //auto interval_tree = FlatIntervalTree2D(std::move(bboxes));
+        interval_tree = std::make_unique<resfo::IntervalTree2D>(std::move(bboxes));
+        auto end = std::chrono::high_resolution_clock::now();
+        //std::chrono::milliseconds duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-    std::cout << "Execution took " << duration.count() << " milliseconds." << std::endl;
+        //std::cout << "Building tree took " << duration.count() << " milliseconds." << std::endl;
+        }
 
     auto [z_min, z_max] = std::minmax_element(zcorn, zcorn + zcorn_buf.size);
 
@@ -138,7 +141,7 @@ std::vector<std::optional<std::tuple<int, int, int>>> find_cells_containing_poin
 
         auto result = resfo::grid_search_interval_tree(
             p, coord, zcorn, dims, top_intersection, bot_intersection, tolerance,
-            interval_tree);
+            *interval_tree);
 
         if (result.has_value()) {
             results.push_back(std::make_tuple(result->i, result->j, result->k));
