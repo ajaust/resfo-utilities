@@ -10,15 +10,14 @@ namespace py = pybind11;
 
 
 struct BoundingBox {
-    std::tuple<int, int, int> cell_index;
-    1
+    resfo::CellIndex cell_index;
+
     double min_x;
     double min_y;
     double max_x;
     double max_y;
 
-    BoundingBox() {
-        cell_index = std::make_tuple(-1, -1, -1);
+    BoundingBox() : cell_index({-1, -1, -1}) {
         this->min_y = std::numeric_limits<double>::max();
         this->min_x = std::numeric_limits<double>::max();
 
@@ -26,7 +25,8 @@ struct BoundingBox {
         this->max_x = std::numeric_limits<double>::lowest();
     }
 
-    BoundingBox(std::tuple<int, int, int> cell_index_, std::vector<double> corners) : BoundingBox(), cell_index(cell_index_) {
+    BoundingBox(resfo::CellIndex cell_index_, std::vector<double> corners) : BoundingBox() {
+        this->cell_index = cell_index_;
         for (int v = 0; v < resfo::NUM_CORNERS; v += 3) {
             const double& x = corners[v];
             const double& y = corners[v + 1];
@@ -71,21 +71,24 @@ public:
     FlatIntervalTree2D(
         std::vector<BoundingBox> boxes
     ) {
-        size = boxes.size();
+        this->size = boxes.size();
         if (size == 0) return;
 
         std::sort(boxes.begin(), boxes.end(), [](const BoundingBox& a, const BoundingBox& b) {
-            return a.box.min_x < b.box.min_x;
+            return a.min_x < b.min_x;
         });
 
-        this->tree.resize(size);
-        build(boxes, 0, 0, static_cast<int>(n) - 1);
+        this->tree.resize(this->size);
+        build(boxes, 0, 0, static_cast<int>(this->size) - 1);
 
     }
 
-    void queryPoint(double x, double y, std::vector<BoundingBox>& results) const {
-        if (size == 0) return;
-        queryUtil(0, 0,, static_cast<int>(size) - 1, x, y, results);
+    std::vector<resfo::CellIndex> queryPoint(double x, double y) const {
+        std::vector<resfo::CellIndex> result;
+        if (this->size == 0) return result;
+        result.reserve(20);
+        queryUtil(0, 0, static_cast<int>(this->size) - 1, x, y, result);
+        return result;
     }
 
 private:
@@ -97,25 +100,25 @@ private:
         if (start == end) return;
 
         if (start <= mid - 1) {
-            left = leftChild(node);
+            int left = leftChild(node);
             build(boxes, left, start, mid - 1);
-            updateAugmentedData(node, left);
+            this->updateAugmentedData(node, left);
         }
 
         if (mid + 1 <= end) {
-            right = rightChild(node);
+            int right = rightChild(node);
             build(boxes, right, mid + 1, end);
-            updateAugmentedData(node, right);
-        }
-
-        void updateAugmentedData(int parent, int child) {
-            tree[parent].max_x = std::max(tree[parent].max_x, tree[child].max_x);
-            tree[parent].min_y = std::min(tree[parent].min_y, tree[child].min_y);
-            tree[parent].max_y = std::max(tree[parent].max_y, tree[child].max_y);
+            this->updateAugmentedData(node, right);
         }
     }
 
-    void queryUtil(int node, int start, int end, double x, double y, std::vector<BoundingBox>& results) const {
+    void updateAugmentedData(int parent, int child) {
+        tree[parent].max_x = std::max(tree[parent].max_x, tree[child].max_x);
+        tree[parent].min_y = std::min(tree[parent].min_y, tree[child].min_y);
+        tree[parent].max_y = std::max(tree[parent].max_y, tree[child].max_y);
+    }
+
+    void queryUtil(int node, int start, int end, double x, double y, std::vector<resfo::CellIndex>& results) const {
         const FlatNode& current = tree[node];
 
         if (x > current.max_x || y < current.min_y || y > current.max_y) {
@@ -123,7 +126,7 @@ private:
         }
 
         if (x >= current.box.min_x && x <= current.box.max_x && y >= current.box.min_y && y <= current.box.max_y) {
-            results.push_back(current.box);
+            results.push_back(current.box.cell_index);
         }
 
         int mid = start + (end - start) / 2;
@@ -131,7 +134,7 @@ private:
             queryUtil(leftChild(node), start, mid - 1, x, y, results);
         }
 
-        if (mid + 1 <= end and x >= curr.box.min_x) {
+        if (mid + 1 <= end and x >= current.box.min_x) {
             queryUtil(rightChild(node), mid + 1, end, x, y, results);
         }
     }
@@ -290,7 +293,7 @@ private:
 */
 
 
-std::vector<BoundingBoxes> create_bounding_boxes(const float* coord, const float* zcorn,const resfo::GridDimensions& dims) {
+std::vector<BoundingBox> create_bounding_boxes(const float* coord, const float* zcorn,const resfo::GridDimensions& dims) {
     std::cout << "Grid dimensions: " << dims.ni << " " << dims.nj << " " << dims.nk << "\n";
 
     std::vector<std::vector<std::vector<BoundingBox>>> boxes(
@@ -308,7 +311,7 @@ std::vector<BoundingBoxes> create_bounding_boxes(const float* coord, const float
                 // Implementation would go here
                 auto corners = resfo::cell_corners(i, j, k, coord, zcorn, dims);
                 {
-                    boxes[i][j][k] = BoundingBox(corners);
+                    boxes[i][j][k] = BoundingBox({i, j, k}, corners);
                 }
 
                 if (i < 2 and j < 2 and k < 1) {
@@ -362,7 +365,73 @@ std::vector<std::optional<std::tuple<int, int, int>>> find_cells_containing_poin
         static_cast<int>(zcorn_shape[1]),
         static_cast<int>(zcorn_shape[2])
     };
-    create_bounding_boxes(coord, zcorn, dims);
+
+    auto [z_min, z_max] = std::minmax_element(zcorn, zcorn + zcorn_buf.size);
+
+    auto top_intersection = resfo::pillar_z_intersection(coord, dims, *z_min);
+    auto bot_intersection = resfo::pillar_z_intersection(coord, dims, *z_max);
+
+    size_t num_points = points_buf.shape[0];
+    std::vector<std::optional<std::tuple<int, int, int>>> results;
+    results.reserve(num_points);
+    std::optional<std::pair<int, int>> prev_ij;
+
+    for (size_t p_idx = 0; p_idx < num_points; ++p_idx) {
+        Eigen::Vector3d p{
+            points[p_idx * 3],
+            points[p_idx * 3 + 1],
+            points[p_idx * 3 + 2]
+        };
+
+        auto result = resfo::grid_search(
+            p, coord, zcorn, dims, top_intersection, bot_intersection, tolerance,
+            prev_ij);
+
+        if (result.has_value()) {
+            results.push_back(std::make_tuple(result->i, result->j, result->k));
+            prev_ij = std::make_pair(result->i, result->j);
+        } else {
+            results.push_back(std::nullopt);
+            prev_ij = std::nullopt;
+        }
+    }
+    return results;
+}
+
+std::vector<std::optional<std::tuple<int, int, int>>> find_cells_containing_points_interval_tree(
+    py::array_t<float, py::array::c_style | py::array::forcecast> points_array,
+    py::array_t<float, py::array::c_style | py::array::forcecast> coord_array,
+    py::array_t<float, py::array::c_style | py::array::forcecast> zcorn_array,
+    float tolerance) {
+
+    auto points_buf = points_array.request();
+    auto coord_buf = coord_array.request();
+    auto zcorn_buf = zcorn_array.request();
+
+    if (points_buf.ndim != 2 || points_buf.shape[1] != 3) {
+        throw std::runtime_error("Points array must have shape (n, 3)");
+    }
+
+    if (coord_buf.ndim != 4 || coord_buf.shape[2] != 2 || coord_buf.shape[3] != 3) {
+        throw std::runtime_error("Coord array must have shape (ni+1, nj+1, 2, 3)");
+    }
+
+    if (zcorn_buf.ndim != 4 || zcorn_buf.shape[3] != 8) {
+        throw std::runtime_error("Zcorn array must have shape (ni, nj, nk, 8)");
+    }
+
+    const float* points = static_cast<const float*>(points_buf.ptr);
+    const float* coord = static_cast<const float*>(coord_buf.ptr);
+    const float* zcorn = static_cast<const float*>(zcorn_buf.ptr);
+
+    auto zcorn_shape = zcorn_buf.shape;
+    resfo::GridDimensions dims{
+        static_cast<int>(zcorn_shape[0]),
+        static_cast<int>(zcorn_shape[1]),
+        static_cast<int>(zcorn_shape[2])
+    };
+    auto bboxes = create_bounding_boxes(coord, zcorn, dims);
+    auto interval_tree = FlatIntervalTree2D(std::move(bboxes));
 
     auto [z_min, z_max] = std::minmax_element(zcorn, zcorn + zcorn_buf.size);
 
@@ -453,6 +522,13 @@ PYBIND11_MODULE(_grid_cpp, m) {
     m.doc() = "Fast C++ implementation of grid search algorithms";
 
     m.def("find_cells_containing_points", &find_cells_containing_points,
+          py::arg("points"),
+          py::arg("coord"),
+          py::arg("zcorn"),
+          py::arg("tolerance") = 1e-6f,
+          "Find cells containing given points");
+
+    m.def("find_cells_containing_points_interval_tree", &find_cells_containing_points_interval_tree,
           py::arg("points"),
           py::arg("coord"),
           py::arg("zcorn"),
