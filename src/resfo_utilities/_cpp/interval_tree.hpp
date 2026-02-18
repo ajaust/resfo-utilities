@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cmath>
 #include <limits>
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 #include "grid.hpp"
@@ -38,39 +40,32 @@ std::vector<BoundingBox> create_bounding_boxes(
     const resfo::GridDimensions& dims
 );
 
+// Spatial hash replacing the previous IntervalTree2D implementation.
+// Bounding boxes are inserted into all hash cells they overlap; queries
+// collect candidates from the relevant hash cells and filter by the exact bbox.
 class IntervalTree2D {
 private:
-    struct Node {
-        double median_x;
-        std::vector<BoundingBox> overlapping_by_min_y; // sorted by min_y ascending
-        std::vector<BoundingBox> overlapping_by_max_y; // sorted by max_y ascending
-        int left = -1;
-        int right = -1;
+    struct PairHash {
+        std::size_t operator()(const std::pair<int,int>& p) const noexcept {
+            return std::hash<long long>()(
+                (static_cast<long long>(p.first) << 32) ^ static_cast<unsigned int>(p.second));
+        }
     };
 
-    int root_index = -1;
-    std::vector<Node> nodes;
+    double cell_size = 1.0;
+    std::unordered_map<std::pair<int,int>, std::vector<BoundingBox>, PairHash> table;
 
-    static double median_of(std::vector<double>& values);
-
-    int build(std::vector<BoundingBox>& boxes);
-
-    void query(int node_index, double x0, double y0, double tolerance, std::vector<CellIndex>& results) const;
-
+    std::pair<int,int> hash_cell(double x, double y) const {
+        return {static_cast<int>(std::floor(x / cell_size)),
+                static_cast<int>(std::floor(y / cell_size))};
+    }
 
 public:
     IntervalTree2D() = default;
 
-    explicit IntervalTree2D(std::vector<BoundingBox> boxes) {
-        root_index = build(boxes);
-    }
+    explicit IntervalTree2D(std::vector<BoundingBox> boxes);
 
-    std::vector<CellIndex> query(double x0, double y0, double tolerance = 1.e-6) const {
-        std::vector<CellIndex> results;
-        results.reserve(30);
-        this->query(this->root_index, x0, y0, tolerance, results);
-        return results;
-    }
+    std::vector<CellIndex> query(double x0, double y0, double tolerance = 1.e-6) const;
 };
 
 } /* namespace resfo */

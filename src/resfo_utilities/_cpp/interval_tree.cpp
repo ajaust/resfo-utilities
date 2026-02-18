@@ -1,6 +1,9 @@
 #include "interval_tree.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <iostream>
+#include <unordered_set>
 
 #include "grid.hpp"
 #include "point_in_cell.hpp"
@@ -18,96 +21,78 @@ std::ostream& operator<<(std::ostream& os, const BoundingBox& box) {
 }
 
 
-double IntervalTree2D::median_of(std::vector<double>& values) {
-    size_t n = values.size();
-    std::nth_element(values.begin(), values.begin() + n / 2, values.end());
-    return values[n / 2];
-}
+IntervalTree2D::IntervalTree2D(std::vector<BoundingBox> boxes) {
+    if (boxes.empty()) return;
 
-// Build returns index of the created node in nodes vector
-int IntervalTree2D::build(std::vector<BoundingBox>& boxes) {
-    if (boxes.empty()) return -1;
+    // Choose cell size as the median bounding-box diagonal so that most boxes
+    // span only a handful of hash cells while still providing good locality.
+    std::vector<double> diagonals;
+    diagonals.reserve(boxes.size());
+    for (const auto& b : boxes) {
+        double dx = b.max_x - b.min_x;
+        double dy = b.max_y - b.min_y;
+        diagonals.push_back(std::sqrt(dx * dx + dy * dy));
+    }
+    std::nth_element(diagonals.begin(), diagonals.begin() + diagonals.size() / 2, diagonals.end());
+    double median_diag = diagonals[diagonals.size() / 2];
+    cell_size = (median_diag > 0.0) ? median_diag : 1.0;
 
-    // Compute median of interval midpoints on x
-    std::vector<double> midpoints;
-    midpoints.reserve(boxes.size());
-    for (const auto& box : boxes)
-    midpoints.push_back((box.min_x + box.max_x) * 0.5);
-    double median = median_of(midpoints);
-
-    std::vector<BoundingBox> left_boxes, right_boxes, overlapping_boxes;
     for (const auto& box : boxes) {
-        if (box.max_x < median)
-            left_boxes.push_back(box);
-        else if (box.min_x > median)
-            right_boxes.push_back(box);
-        else
-            overlapping_boxes.push_back(box);
-    }
-
-    // Prepare two sorted vectors for overlapping intervals
-    std::vector<BoundingBox> overlapping_by_min_y = overlapping_boxes;
-    std::sort(overlapping_by_min_y.begin(), overlapping_by_min_y.end(),
-              [](const BoundingBox& a, const BoundingBox& b) {
-              return a.min_y < b.min_y;
-              });
-
-    std::vector<BoundingBox> overlapping_by_max_y = overlapping_boxes;
-    std::sort(overlapping_by_max_y.begin(), overlapping_by_max_y.end(),
-              [](const BoundingBox& a, const BoundingBox& b) {
-              return a.max_y < b.max_y;
-              });
-
-    int node_index = static_cast<int>(nodes.size());
-    nodes.push_back(Node{median, std::move(overlapping_by_min_y), std::move(overlapping_by_max_y), -1, -1});
-
-    nodes[node_index].left = build(left_boxes);
-    nodes[node_index].right = build(right_boxes);
-
-    return node_index;
-}
-
-
-void IntervalTree2D::query(int node_index, double x0, double y0, double tolerance, std::vector<CellIndex>& results) const {
-    if (node_index == -1) return;
-
-    const Node& node = nodes[node_index];
-
-    if (x0 < node.median_x) {
-        query(node.left, x0, y0, tolerance, results);
-    } else if (x0 > node.median_x) {
-        query(node.right, x0, y0, tolerance, results);
-    }
-
-    // Binary search on overlapping_by_min_y to find intervals with min_y <= y0
-    const auto& v = node.overlapping_by_min_y;
-    auto it = std::upper_bound(v.begin(), v.end(), y0,
-                               [](double val, const BoundingBox& box) {
-                               return val < box.min_y;
-                               });
-
-    // Check candidates in [v.begin(), it)
-    for (auto iter = v.begin(); iter != it; ++iter) {
-        const auto& box = *iter;
-        if (box.max_y + tolerance >= y0 && box.min_x - tolerance <= x0 && x0 <= box.max_x + tolerance) {
-            results.push_back(box.cell_index);
+        auto [ix0, iy0] = hash_cell(box.min_x, box.min_y);
+        auto [ix1, iy1] = hash_cell(box.max_x, box.max_y);
+        for (int ix = ix0; ix <= ix1; ++ix) {
+            for (int iy = iy0; iy <= iy1; ++iy) {
+                table[{ix, iy}].push_back(box);
+            }
         }
     }
 }
 
-std::vector<BoundingBox> create_bounding_boxes(const float* coord, const float* zcorn,const resfo::GridDimensions& dims) {
+std::vector<CellIndex> IntervalTree2D::query(double x0, double y0, double tolerance) const {
+    auto [ix0, iy0] = hash_cell(x0 - tolerance, y0 - tolerance);
+    auto [ix1, iy1] = hash_cell(x0 + tolerance, y0 + tolerance);
+
+    // Collect unique candidates from all overlapping hash cells.
+    std::vector<CellIndex> results;
+    results.reserve(30);
+
+    // Use a flat visited set keyed on linearised (i,j,k) to avoid duplicates.
+    struct CellHash {
+        std::size_t operator()(const std::tuple<int,int,int>& t) const noexcept {
+            auto h = std::hash<int>{};
+            return h(std::get<0>(t)) ^ (h(std::get<1>(t)) << 11) ^ (h(std::get<2>(t)) << 22);
+        }
+    };
+    std::unordered_set<std::tuple<int,int,int>, CellHash> seen;
+
+    for (int ix = ix0; ix <= ix1; ++ix) {
+        for (int iy = iy0; iy <= iy1; ++iy) {
+            auto it = table.find({ix, iy});
+            if (it == table.end()) continue;
+            for (const auto& box : it->second) {
+                if (box.min_x - tolerance <= x0 && x0 <= box.max_x + tolerance &&
+                    box.min_y - tolerance <= y0 && y0 <= box.max_y + tolerance) {
+                    auto key = std::make_tuple(box.cell_index.i, box.cell_index.j, box.cell_index.k);
+                    if (seen.insert(key).second) {
+                        results.push_back(box.cell_index);
+                    }
+                }
+            }
+        }
+    }
+
+    return results;
+}
+
+std::vector<BoundingBox> create_bounding_boxes(const float* coord, const float* zcorn, const resfo::GridDimensions& dims) {
     std::vector<BoundingBox> boxes;
-    boxes.reserve(
-        dims.ni * dims.nj * dims.nk
-    );
+    boxes.reserve(dims.ni * dims.nj * dims.nk);
 
     for (int i = 0; i < dims.ni; ++i) {
         for (int j = 0; j < dims.nj; ++j) {
             for (int k = 0; k < dims.nk; ++k) {
                 auto corners = resfo::cell_corners(i, j, k, coord, zcorn, dims);
-                {
-                    boxes.emplace_back(BoundingBox({i, j, k}, corners));
-                }
+                boxes.emplace_back(BoundingBox({i, j, k}, corners));
             }
         }
     }
