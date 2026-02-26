@@ -32,8 +32,8 @@ from numpy import typing as npt
 from ._grid_cpp import (
     find_cells_containing_points,
     find_cells_containing_points_interval_tree,
-    find_cells_containing_points_pillar_tree,
     find_cells_containing_points_pillar_interval_tree,
+    find_cells_containing_points_pillar_tree,
     point_in_cell,
 )
 
