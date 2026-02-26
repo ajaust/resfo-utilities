@@ -130,26 +130,53 @@ static void BM_GridSearchPillarTree(benchmark::State& state)
     state.SetItemsProcessed(state.iterations() * n_pts);
 }
 
-// ---------------------------------------------------------------------------
-// Registration: Args = {ni (=nj), nk, n_points}
-// ---------------------------------------------------------------------------
+template<PointSet MakePoints>
+static void BM_GridSearchPillarIntervalTree(benchmark::State& state)
+{
+    const int ni = state.range(0);
+    const int nj = state.range(0);
+    const int nk = state.range(1);
+    const int n_pts = state.range(2);
+
+    std::vector<float> coord, zcorn;
+    make_grid(ni, nj, nk, coord, zcorn);
+    resfo::GridDimensions dims{ni, nj, nk};
+
+    auto pillar_bboxes = resfo::create_pillar_bounding_boxes(coord.data(), dims);
+    resfo::PillarIntervalTree tree(std::move(pillar_bboxes));
+
+    auto points = MakePoints(ni, nj, nk, n_pts);
+
+    for (auto _ : state) {
+        for (const auto& p : points) {
+            auto r = resfo::grid_search_pillar_interval_tree(p, coord.data(), zcorn.data(), dims, 1e-6f, tree);
+            benchmark::DoNotOptimize(r);
+        }
+    }
+    state.SetItemsProcessed(state.iterations() * n_pts);
+}
+
+
 
 #define REGISTER(BM, suffix, n_pts) \
     BENCHMARK_TEMPLATE(BM, make_points_##suffix)->Args({50, 10, n_pts})->Args({50, 50, n_pts})
 
 // All inside
-REGISTER(BM_GridSearch,             inside,  100);
-REGISTER(BM_GridSearchIntervalTree, inside,  100);
-REGISTER(BM_GridSearchPillarTree,   inside,  100);
+REGISTER(BM_GridSearch,                   inside,  100);
+REGISTER(BM_GridSearchIntervalTree,       inside,  100);
+REGISTER(BM_GridSearchPillarTree,         inside,  100);
+REGISTER(BM_GridSearchPillarIntervalTree, inside,  100);
 
 // All outside
-REGISTER(BM_GridSearch,             outside, 100);
-REGISTER(BM_GridSearchIntervalTree, outside, 100);
-REGISTER(BM_GridSearchPillarTree,   outside, 100);
+REGISTER(BM_GridSearch,                   outside, 100);
+REGISTER(BM_GridSearchIntervalTree,       outside, 100);
+REGISTER(BM_GridSearchPillarTree,         outside, 100);
+REGISTER(BM_GridSearchPillarIntervalTree, outside, 100);
 
 // 5% outside
-REGISTER(BM_GridSearch,             mixed,   100);
-REGISTER(BM_GridSearchIntervalTree, mixed,   100);
-REGISTER(BM_GridSearchPillarTree,   mixed,   100);
+REGISTER(BM_GridSearch,                   mixed,   100);
+REGISTER(BM_GridSearchIntervalTree,       mixed,   100);
+REGISTER(BM_GridSearchPillarTree,         mixed,   100);
+REGISTER(BM_GridSearchPillarIntervalTree, mixed,   100);
 
 BENCHMARK_MAIN();

@@ -184,4 +184,83 @@ std::vector<std::pair<int,int>> PillarTree2D::query(float x, float y, float tole
     return results;
 }
 
+// ---------------------------------------------------------------------------
+// PillarIntervalTree — true 2D interval tree on PillarBoundingBox
+// ---------------------------------------------------------------------------
+
+int PillarIntervalTree::build(std::vector<PillarBoundingBox> boxes) {
+    if (boxes.empty()) return -1;
+
+    // Midpoint = median of all interval midpoints to keep the tree balanced.
+    std::vector<float> mids;
+    mids.reserve(boxes.size());
+    for (const auto& b : boxes)
+        mids.push_back((b.min_x + b.max_x) * 0.5f);
+    std::nth_element(mids.begin(), mids.begin() + mids.size() / 2, mids.end());
+    float mid = mids[mids.size() / 2];
+
+    std::vector<PillarBoundingBox> left_boxes, right_boxes, spanning;
+    for (auto& b : boxes) {
+        if (b.max_x < mid)      left_boxes.push_back(b);
+        else if (b.min_x > mid) right_boxes.push_back(b);
+        else                    spanning.push_back(b);
+    }
+
+    // Reserve to prevent reallocation invalidating our index during recursion.
+    // Worst case: a full binary tree has 2*n - 1 nodes.
+    nodes_.reserve(nodes_.size() + 2 * boxes.size());
+
+    int idx = static_cast<int>(nodes_.size());
+    nodes_.emplace_back();
+    nodes_[idx].mid    = mid;
+    nodes_[idx].by_min = spanning;
+    nodes_[idx].by_max = spanning;
+    std::sort(nodes_[idx].by_min.begin(), nodes_[idx].by_min.end(),
+              [](const auto& a, const auto& b) { return a.min_x < b.min_x; });
+    std::sort(nodes_[idx].by_max.begin(), nodes_[idx].by_max.end(),
+              [](const auto& a, const auto& b) { return a.max_x > b.max_x; });
+
+    nodes_[idx].left  = build(std::move(left_boxes));
+    nodes_[idx].right = build(std::move(right_boxes));
+    return idx;
+}
+
+void PillarIntervalTree::query_node(int idx, float x, float y, float tol,
+                                    std::vector<std::pair<int,int>>& results) const {
+    if (idx == -1) return;
+    const Node& node = nodes_[idx];
+
+    if (x <= node.mid) {
+        // All spanning intervals have max_x >= mid >= x, so containment in X reduces
+        // to min_x <= x + tol. The list is sorted by min_x ascending: stop at first miss.
+        for (const auto& b : node.by_min) {
+            if (b.min_x > x + tol) break;
+            if (b.min_y - tol <= y && y <= b.max_y + tol)
+                results.emplace_back(b.cell_index.i, b.cell_index.j);
+        }
+        query_node(node.left, x, y, tol, results);
+    } else {
+        // All spanning intervals have min_x <= mid < x, so containment in X reduces
+        // to max_x >= x - tol. The list is sorted by max_x descending: stop at first miss.
+        for (const auto& b : node.by_max) {
+            if (b.max_x < x - tol) break;
+            if (b.min_y - tol <= y && y <= b.max_y + tol)
+                results.emplace_back(b.cell_index.i, b.cell_index.j);
+        }
+        query_node(node.right, x, y, tol, results);
+    }
+}
+
+PillarIntervalTree::PillarIntervalTree(std::vector<PillarBoundingBox> boxes) {
+    if (boxes.empty()) return;
+    nodes_.reserve(2 * boxes.size());
+    build(std::move(boxes));
+}
+
+std::vector<std::pair<int,int>> PillarIntervalTree::query(float x, float y, float tolerance) const {
+    std::vector<std::pair<int,int>> results;
+    query_node(0, x, y, tolerance, results);
+    return results;
+}
+
 } /* namespace resfo */

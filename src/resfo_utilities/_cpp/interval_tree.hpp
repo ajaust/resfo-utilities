@@ -109,6 +109,37 @@ public:
     std::vector<std::pair<int,int>> query(float x, float y, float tolerance = 1.e-6f) const;
 };
 
+// True 2D interval tree over PillarBoundingBox.
+// The X dimension is indexed with a classic interval tree (O(log n + k') stabbing query);
+// each candidate is then filtered by Y containment. This avoids the spatial hash's
+// worst-case behaviour when bounding boxes are large (e.g. heavily tilted pillars).
+class PillarIntervalTree {
+private:
+    struct Node {
+        float mid;
+        // Spanning intervals sorted by min_x ascending  (used when query x <= mid).
+        std::vector<PillarBoundingBox> by_min;
+        // Spanning intervals sorted by max_x descending (used when query x >  mid).
+        std::vector<PillarBoundingBox> by_max;
+        int left  = -1;
+        int right = -1;
+    };
+
+    std::vector<Node> nodes_;
+
+    // Returns index of the root node, or -1 for an empty tree.
+    int build(std::vector<PillarBoundingBox> boxes);
+    void query_node(int idx, float x, float y, float tol,
+                    std::vector<std::pair<int,int>>& results) const;
+
+public:
+    PillarIntervalTree() = default;
+    explicit PillarIntervalTree(std::vector<PillarBoundingBox> boxes);
+
+    // Returns (i,j) indices of all pillar columns whose bounding box contains (x,y).
+    std::vector<std::pair<int,int>> query(float x, float y, float tolerance = 1.e-6f) const;
+};
+
 // Spatial hash replacing the previous IntervalTree2D implementation.
 // Bounding boxes are inserted into all hash cells they overlap; queries
 // collect candidates from the relevant hash cells and filter by the exact bbox.

@@ -33,6 +33,7 @@ from ._grid_cpp import (
     find_cells_containing_points,
     find_cells_containing_points_interval_tree,
     find_cells_containing_points_pillar_tree,
+    find_cells_containing_points_pillar_interval_tree,
     point_in_cell,
 )
 
@@ -379,6 +380,44 @@ class CornerpointGrid:
             points = self.map_axes.transform_map_points(points)
 
         return find_cells_containing_points_pillar_tree(
+            np.ascontiguousarray(points),
+            self.coord,
+            self.zcorn,
+            tolerance,
+        )
+
+    def find_cell_containing_point_pillar_interval_tree(
+        self,
+        points: npt.ArrayLike,
+        map_coordinates: bool = True,
+        tolerance: float = 1.0e-6,
+    ) -> list[tuple[int, int, int] | None]:
+        """Find a cell in the grid which contains the given point.
+
+        Uses a true 2D interval tree over pillar bounding boxes.
+
+        Args:
+            points:
+                The points to find cells for.
+            map_coordinates:
+                Whether points are in the map coordinate system.
+                Defaults to True.
+            tolerance:
+                The maximum distance to the cell boundary a point can have to
+                be considered to be contained in the cell.
+
+        Returns:
+            list of i,j,k indices for each point (or None if the
+            point is not contained in any cell.
+        """
+        points = np.asarray(points, dtype=np.float32)
+        if len(points.shape) == 1:
+            points = points[np.newaxis, :]
+
+        if map_coordinates and self.map_axes is not None:
+            points = self.map_axes.transform_map_points(points)
+
+        return find_cells_containing_points_pillar_interval_tree(
             np.ascontiguousarray(points),
             self.coord,
             self.zcorn,

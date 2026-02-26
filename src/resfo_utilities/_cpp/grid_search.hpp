@@ -126,4 +126,8 @@ std::optional<CellIndex> grid_search_pillar_tree(
     const Eigen::Vector3d& p, const float* coord, const float* zcorn, const GridDimensions& dims,
     float tolerance, const PillarTree2D& tree);
 
+std::optional<CellIndex> grid_search_pillar_interval_tree(
+    const Eigen::Vector3d& p, const float* coord, const float* zcorn, const GridDimensions& dims,
+    float tolerance, const PillarIntervalTree& tree);
+
 }  // namespace resfo
