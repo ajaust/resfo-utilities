@@ -253,12 +253,33 @@ void PillarIntervalTree::query_node(int idx, float x, float y, float tol,
 
 PillarIntervalTree::PillarIntervalTree(std::vector<PillarBoundingBox> boxes) {
     if (boxes.empty()) return;
+
+    // Choose the primary tree axis as whichever has the smaller total bbox
+    // extent — this minimises the size of spanning sets and therefore the
+    // number of candidates that reach the secondary-axis linear scan.
+    // For a tilted grid (lean in x), x-extents grow with tilt*depth while
+    // y-extents stay unit-width, so building on y is much more efficient.
+    float sum_x = 0.f, sum_y = 0.f;
+    for (const auto& b : boxes) {
+        sum_x += b.max_x - b.min_x;
+        sum_y += b.max_y - b.min_y;
+    }
+    transposed_ = (sum_y < sum_x);
+    if (transposed_) {
+        for (auto& b : boxes) {
+            std::swap(b.min_x, b.min_y);
+            std::swap(b.max_x, b.max_y);
+        }
+    }
+
     nodes_.reserve(2 * boxes.size());
     build(std::move(boxes));
 }
 
 std::vector<std::pair<int,int>> PillarIntervalTree::query(float x, float y, float tolerance) const {
     std::vector<std::pair<int,int>> results;
+    // Swap coordinates to match the axis the tree was built on.
+    if (transposed_) std::swap(x, y);
     query_node(0, x, y, tolerance, results);
     return results;
 }

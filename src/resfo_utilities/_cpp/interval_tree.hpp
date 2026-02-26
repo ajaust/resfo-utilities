@@ -117,15 +117,19 @@ class PillarIntervalTree {
 private:
     struct Node {
         float mid;
-        // Spanning intervals sorted by min_x ascending  (used when query x <= mid).
+        // Spanning intervals sorted by primary-axis min ascending  (used when query <= mid).
         std::vector<PillarBoundingBox> by_min;
-        // Spanning intervals sorted by max_x descending (used when query x >  mid).
+        // Spanning intervals sorted by primary-axis max descending (used when query >  mid).
         std::vector<PillarBoundingBox> by_max;
         int left  = -1;
         int right = -1;
     };
 
     std::vector<Node> nodes_;
+    // When true the tree is built on the Y axis (x and y coords are swapped in
+    // the stored bboxes).  The query() method swaps its x,y arguments before
+    // descending the tree and the results are returned with (i,j) unmodified.
+    bool transposed_ = false;
 
     // Returns index of the root node, or -1 for an empty tree.
     int build(std::vector<PillarBoundingBox> boxes);
