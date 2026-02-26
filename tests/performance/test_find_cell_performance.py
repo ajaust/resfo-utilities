@@ -5,7 +5,6 @@ import pytest
 
 from resfo_utilities import CornerpointGrid
 
-
 TILT_FACTOR = 0.5
 FAULT_THROW = 5.0
 
@@ -148,12 +147,6 @@ def test_benchmark_find_cell_pillar_interval_tree_but_point_outside(
     benchmark(run)
 
 
-# ---------------------------------------------------------------------------
-# Tilted grid benchmarks (pillars lean 0.5 units per depth unit)
-# ---------------------------------------------------------------------------
-# At depth z = k + 0.5 the cell-centre x of column ci is:
-# ci + 0.5 + TILT_FACTOR * (k + 0.5)
-
 def test_benchmark_find_cell_pillar_tree_tilted_inside(large_tilted_grid, benchmark):
     def run():
         pts = [
@@ -179,7 +172,8 @@ def test_benchmark_find_cell_pillar_tree_tilted_outside(large_tilted_grid, bench
 
 
 def test_benchmark_find_cell_pillar_interval_tree_tilted_inside(
-    large_tilted_grid, benchmark
+    large_tilted_grid,
+    benchmark,
 ):
     def run():
         pts = [
@@ -193,14 +187,15 @@ def test_benchmark_find_cell_pillar_interval_tree_tilted_inside(
 
 
 def test_benchmark_find_cell_pillar_interval_tree_tilted_outside(
-    large_tilted_grid, benchmark
+    large_tilted_grid,
+    benchmark,
 ):
     x_shift = (50 + TILT_FACTOR * 10) * 10
     pts = [(x_shift + i, j + 25.5, 2.5) for i, j in product(range(10), range(10))]
 
     def run():
         assert large_tilted_grid.find_cell_containing_point_pillar_interval_tree(
-            pts
+            pts,
         ) == [None for _ in pts]
 
     benchmark(run)
@@ -210,10 +205,11 @@ def test_benchmark_find_cell_pillar_interval_tree_tilted_outside(
 # Faulted grid benchmarks (downthrown block shifted down by FAULT_THROW)
 # ---------------------------------------------------------------------------
 
+
 def test_benchmark_find_cell_pillar_tree_faulted_inside(large_faulted_grid, benchmark):
     # Mix of upthrown (j < 25) and downthrown (j >= 25) cells
     pts = [
-        (i + 25.5, j + 20.5, 2.5)           # upthrown side
+        (i + 25.5, j + 20.5, 2.5)  # upthrown side
         for i, j in product(range(5), range(5))
     ] + [
         (i + 25.5, j + 25.5, 2.5 + FAULT_THROW)  # downthrown side
@@ -228,11 +224,10 @@ def test_benchmark_find_cell_pillar_tree_faulted_inside(large_faulted_grid, benc
 
 
 def test_benchmark_find_cell_pillar_tree_faulted_outside(
-    large_faulted_grid, benchmark
+    large_faulted_grid,
+    benchmark,
 ):
-    pts = [
-        (i + 125.5, j + 125.5, 20.5) for i, j in product(range(10), range(10))
-    ]
+    pts = [(i + 125.5, j + 125.5, 20.5) for i, j in product(range(10), range(10))]
 
     def run():
         assert large_faulted_grid.find_cell_containing_point_pillar_tree(pts) == [
@@ -243,19 +238,16 @@ def test_benchmark_find_cell_pillar_tree_faulted_outside(
 
 
 def test_benchmark_find_cell_pillar_interval_tree_faulted_inside(
-    large_faulted_grid, benchmark
+    large_faulted_grid,
+    benchmark,
 ):
-    pts = [
-        (i + 25.5, j + 20.5, 2.5)
-        for i, j in product(range(5), range(5))
-    ] + [
-        (i + 25.5, j + 25.5, 2.5 + FAULT_THROW)
-        for i, j in product(range(5), range(5))
+    pts = [(i + 25.5, j + 20.5, 2.5) for i, j in product(range(5), range(5))] + [
+        (i + 25.5, j + 25.5, 2.5 + FAULT_THROW) for i, j in product(range(5), range(5))
     ]
 
     def run():
         results = large_faulted_grid.find_cell_containing_point_pillar_interval_tree(
-            pts
+            pts,
         )
         assert all(r is not None for r in results)
 
@@ -263,15 +255,14 @@ def test_benchmark_find_cell_pillar_interval_tree_faulted_inside(
 
 
 def test_benchmark_find_cell_pillar_interval_tree_faulted_outside(
-    large_faulted_grid, benchmark
+    large_faulted_grid,
+    benchmark,
 ):
-    pts = [
-        (i + 125.5, j + 125.5, 20.5) for i, j in product(range(10), range(10))
-    ]
+    pts = [(i + 125.5, j + 125.5, 20.5) for i, j in product(range(10), range(10))]
 
     def run():
         assert large_faulted_grid.find_cell_containing_point_pillar_interval_tree(
-            pts
+            pts,
         ) == [None for _ in pts]
 
     benchmark(run)
