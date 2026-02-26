@@ -112,4 +112,52 @@ std::optional<CellIndex> grid_search_interval_tree(
 
     return std::nullopt;
 }
+std::optional<CellIndex> grid_search_pillar_tree(
+    const Eigen::Vector3d& p, const float* coord, const float* zcorn, const GridDimensions& dims,
+    float tolerance, const PillarTree2D& tree) {
+
+    float bound_tol = 20.0f * tolerance;
+
+    if (dims.ni <= 0 || dims.nj <= 0 || dims.nk <= 0) {
+        return std::nullopt;
+    }
+
+    // Query pillar tree for candidate (i,j) columns based on x,y.
+    auto columns = tree.query(static_cast<float>(p[0]), static_cast<float>(p[1]), bound_tol);
+
+    // For each candidate column, collect (i, j, k) with the z-center of the cell
+    // so we can prioritize the k-layer closest to p.z.
+    struct Candidate {
+        int i, j, k;
+        float z_dist;
+    };
+    std::vector<Candidate> candidates;
+    candidates.reserve(columns.size() * dims.nk);
+
+    const float pz = static_cast<float>(p[2]);
+    for (const auto& [ci, cj] : columns) {
+        for (int k = 0; k < dims.nk; ++k) {
+            int zcorn_idx = (ci * dims.nj * dims.nk + cj * dims.nk + k) * NUM_CORNERS;
+            auto [z_min_it, z_max_it] = std::minmax_element(
+                zcorn + zcorn_idx, zcorn + zcorn_idx + NUM_CORNERS);
+            float z_center = (*z_min_it + *z_max_it) * 0.5f;
+            if (p[2] >= *z_min_it - 2 * bound_tol && p[2] <= *z_max_it + 2 * bound_tol) {
+                candidates.push_back({ci, cj, k, std::abs(z_center - pz)});
+            }
+        }
+    }
+
+    // Sort by z proximity so we check the most likely cell first.
+    std::sort(candidates.begin(), candidates.end(),
+              [](const Candidate& a, const Candidate& b) { return a.z_dist < b.z_dist; });
+
+    for (const auto& c : candidates) {
+        if (resfo::point_in_cell(p, c.i, c.j, c.k, coord, zcorn, dims, tolerance)) {
+            return CellIndex{c.i, c.j, c.k};
+        }
+    }
+
+    return std::nullopt;
+}
+
 }  // namespace resfo

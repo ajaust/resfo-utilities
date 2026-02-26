@@ -42,13 +42,9 @@ def test_benchmark_find_cell_but_point_outside(large_regular_grid, benchmark):
 
 def test_benchmark_find_cell_interval_tree(large_regular_grid, benchmark):
     def run():
-        #assert large_regular_grid.find_cell_containing_point_interval_tree(
-        #    [(i + 25.5, j + 25.5, 20.5) for i, j in product(range(10), range(10))],
-        #) == [(i + 25, j + 25, 2) for i, j in product(range(10), range(10))]
-        large_regular_grid.find_cell_containing_point_interval_tree(
+        assert large_regular_grid.find_cell_containing_point_interval_tree(
             [(i + 25.5, j + 25.5, 20.5) for i, j in product(range(10), range(10))],
-        )
-        assert True
+        ) == [(i + 25, j + 25, 2) for i, j in product(range(10), range(10))]
 
     benchmark(run)
 
@@ -64,14 +60,33 @@ def test_benchmark_find_cell_interval_tree_but_point_outside(
 
     benchmark(run)
 
-def test_bob(
+#def test_bob(
+#    large_regular_grid,
+#):
+#    def run():
+#        assert large_regular_grid.find_cell_containing_point_interval_tree(
+#            [(i + 125.5, j + 125.5, 20.5) for i, j in product(range(10), range(10))],
+#        ) == [None for i, j in product(range(10), range(10))]
+#
+#    breakpoint()
+#    print(large_regular_grid)
+
+def test_benchmark_find_cell_pillar_tree(large_regular_grid, benchmark):
+    def run():
+        assert large_regular_grid.find_cell_containing_point_pillar_tree(
+            [(i + 25.5, j + 25.5, 20.5) for i, j in product(range(10), range(10))],
+        ) == [(i + 25, j + 25, 2) for i, j in product(range(10), range(10))]
+
+    benchmark(run)
+
+
+def test_benchmark_find_cell_pillar_tree_but_point_outside(
     large_regular_grid,
+    benchmark,
 ):
     def run():
-        assert large_regular_grid.find_cell_containing_point_interval_tree(
+        assert large_regular_grid.find_cell_containing_point_pillar_tree(
             [(i + 125.5, j + 125.5, 20.5) for i, j in product(range(10), range(10))],
         ) == [None for i, j in product(range(10), range(10))]
 
-    breakpoint()
-    print(large_regular_grid)
-
+    benchmark(run)

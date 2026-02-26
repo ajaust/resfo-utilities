@@ -82,6 +82,33 @@ std::vector<BoundingBox> create_bounding_boxes(
     const resfo::GridDimensions& dims
 );
 
+// Spatial hash over PillarBoundingBox (one per (i,j) column).
+// query(x, y) returns all (i,j) columns whose bounding box contains the point.
+class PillarTree2D {
+private:
+    struct PairHash {
+        std::size_t operator()(const std::pair<int,int>& p) const noexcept {
+            return std::hash<long long>()(
+                (static_cast<long long>(p.first) << 32) ^ static_cast<unsigned int>(p.second));
+        }
+    };
+
+    float cell_size = 1.0f;
+    std::unordered_map<std::pair<int,int>, std::vector<PillarBoundingBox>, PairHash> table;
+
+    std::pair<int,int> hash_cell(float x, float y) const {
+        return {static_cast<int>(std::floor(x / cell_size)),
+                static_cast<int>(std::floor(y / cell_size))};
+    }
+
+public:
+    PillarTree2D() = default;
+    explicit PillarTree2D(std::vector<PillarBoundingBox> boxes);
+
+    // Returns (i,j) indices of all pillar columns whose bounding box contains (x,y).
+    std::vector<std::pair<int,int>> query(float x, float y, float tolerance = 1.e-6f) const;
+};
+
 // Spatial hash replacing the previous IntervalTree2D implementation.
 // Bounding boxes are inserted into all hash cells they overlap; queries
 // collect candidates from the relevant hash cells and filter by the exact bbox.

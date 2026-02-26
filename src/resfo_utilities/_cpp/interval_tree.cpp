@@ -114,6 +114,7 @@ std::vector<PillarBoundingBox> create_pillar_bounding_boxes(const float* coord, 
             };
 
             PillarBoundingBox box;
+            box.cell_index = {i, j, 0};
             for (int v = 0; v < 4; ++v) {
                 int idx = pillar_idx[v];
                 box.min_x = std::min(box.min_x, coord[idx]);
@@ -136,6 +137,51 @@ std::vector<PillarBoundingBox> create_pillar_bounding_boxes(const float* coord, 
 
 
     return boxes;
+}
+
+PillarTree2D::PillarTree2D(std::vector<PillarBoundingBox> boxes) {
+    if (boxes.empty()) return;
+
+    std::vector<float> diagonals;
+    diagonals.reserve(boxes.size());
+    for (const auto& b : boxes) {
+        float dx = b.max_x - b.min_x;
+        float dy = b.max_y - b.min_y;
+        diagonals.push_back(std::sqrt(dx * dx + dy * dy));
+    }
+    std::nth_element(diagonals.begin(), diagonals.begin() + diagonals.size() / 2, diagonals.end());
+    float median_diag = diagonals[diagonals.size() / 2];
+    cell_size = (median_diag > 0.0f) ? median_diag : 1.0f;
+
+    for (const auto& box : boxes) {
+        auto [ix0, iy0] = hash_cell(box.min_x, box.min_y);
+        auto [ix1, iy1] = hash_cell(box.max_x, box.max_y);
+        for (int ix = ix0; ix <= ix1; ++ix) {
+            for (int iy = iy0; iy <= iy1; ++iy) {
+                table[{ix, iy}].push_back(box);
+            }
+        }
+    }
+}
+
+std::vector<std::pair<int,int>> PillarTree2D::query(float x, float y, float tolerance) const {
+    auto [ix0, iy0] = hash_cell(x - tolerance, y - tolerance);
+    auto [ix1, iy1] = hash_cell(x + tolerance, y + tolerance);
+
+    std::vector<std::pair<int,int>> results;
+    for (int ix = ix0; ix <= ix1; ++ix) {
+        for (int iy = iy0; iy <= iy1; ++iy) {
+            auto it = table.find({ix, iy});
+            if (it == table.end()) continue;
+            for (const auto& box : it->second) {
+                if (box.min_x - tolerance <= x && x <= box.max_x + tolerance &&
+                    box.min_y - tolerance <= y && y <= box.max_y + tolerance) {
+                    results.emplace_back(box.cell_index.i, box.cell_index.j);
+                }
+            }
+        }
+    }
+    return results;
 }
 
 } /* namespace resfo */
