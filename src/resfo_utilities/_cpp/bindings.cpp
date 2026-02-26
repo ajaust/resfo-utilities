@@ -2,6 +2,7 @@
 #include <iostream>
 #include <limits>
 
+#include <optional>
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
@@ -112,15 +113,31 @@ std::vector<std::optional<std::tuple<int, int, int>>> find_cells_containing_poin
         static_cast<int>(zcorn_shape[1]),
         static_cast<int>(zcorn_shape[2])
     };
-    if (not interval_tree) {
-        auto start = std::chrono::high_resolution_clock::now();
-        auto bboxes = resfo::create_bounding_boxes(coord, zcorn, dims);
-        auto interval_tree = FlatIntervalTree2D(std::move(bboxes));
-        //interval_tree = std::make_unique<resfo::IntervalTree2D>(std::move(bboxes));
-        auto end = std::chrono::high_resolution_clock::now();
-        //std::chrono::milliseconds duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-        }
+    std::cout << "Dimensions: " << dims.ni << " x " << dims.nj << " x " << dims.nk << "\n";
+    //if (not interval_tree) {
+    auto start = std::chrono::high_resolution_clock::now();
+    auto bboxes = resfo::create_bounding_boxes(coord, zcorn, dims);
+
+    //auto interval_tree = FlatIntervalTree2D(std::move(bboxes));
+    //interval_tree = std::make_unique<resfo::IntervalTree2D>(std::move(bboxes));
+    auto end = std::chrono::high_resolution_clock::now();
+    std::cout << "Bounding box construction time: " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " micros\n";
+    std::chrono::microseconds duration_bbox = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+    start = std::chrono::high_resolution_clock::now();
+    auto pillar_bboxes = resfo::create_pillar_bounding_boxes(coord, dims);
+
+    //auto interval_tree = FlatIntervalTree2D(std::move(bboxes));
+
+    //interval_tree = std::make_unique<resfo::IntervalTree2D>(std::move(bboxes));
+    end = std::chrono::high_resolution_clock::now();
+    std::cout << "Pillar bounding box construction time: " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " micros\n";
+    std::chrono::microseconds duration_pillar_bbox = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+    std::cout << "Ration bbox vs pillar bbox construction time: " << static_cast<double>(duration_bbox.count()) / duration_pillar_bbox.count() << "\n";
+
+    //}
 
     auto [z_min, z_max] = std::minmax_element(zcorn, zcorn + zcorn_buf.size);
 
@@ -132,15 +149,18 @@ std::vector<std::optional<std::tuple<int, int, int>>> find_cells_containing_poin
     results.reserve(num_points);
 
     for (size_t p_idx = 0; p_idx < num_points; ++p_idx) {
+        // Make this an Eigen::Map and then ensure that grid_search takes a
+        // Eigen Ref
         Eigen::Vector3d p{
             points[p_idx * 3],
             points[p_idx * 3 + 1],
             points[p_idx * 3 + 2]
         };
 
-        auto result = resfo::grid_search_interval_tree(
-            p, coord, zcorn, dims, top_intersection, bot_intersection, tolerance,
-            interval_tree);
+        std::optional<resfo::CellIndex> result = std::nullopt;
+        //auto result = resfo::grid_search_interval_tree(
+        //    p, coord, zcorn, dims, top_intersection, bot_intersection, tolerance,
+        //    interval_tree);
 
         if (result.has_value()) {
             results.push_back(std::make_tuple(result->i, result->j, result->k));
