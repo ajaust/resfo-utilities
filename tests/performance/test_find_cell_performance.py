@@ -119,6 +119,7 @@ def test_benchmark_find_cell_pillar_interval_tree_tilted_inside(
 
     benchmark(run)
 
+
 def test_benchmark_find_cell_tree_tilted_inside(
     large_tilted_grid,
     benchmark,

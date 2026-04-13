@@ -2,14 +2,10 @@
 
 #include <algorithm>
 #include <cmath>
-#include <iostream>
-#include <unordered_set>
 
 #include "grid.hpp"
-#include "point_in_cell.hpp"
 
 #include <Eigen/Dense>
-#include <unsupported/Eigen/CXX11/Tensor>
 
 namespace resfo {
 
