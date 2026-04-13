@@ -21,28 +21,6 @@ struct PillarBoundingBox {
     float max_y = std::numeric_limits<float>::lowest();
     float max_x = std::numeric_limits<float>::lowest();
 
-    //PillarBoundingBox(const Eigen::Ref<Eigen::VectorXd> xcoords, const Eigen::Ref<Eigen::VectorXd> ycoords) {
-    //    //{
-    //    //    auto [min_x_it, max_x_it] = std::minmax_element(xcoords.begin(), xcoords.begin() + 4);
-    //    //    min_x = *min_x_it;
-    //    //    max_x = *max_x_it;
-    //    //}
-    //    //{
-    //    //    auto [min_y_it, max_y_it] = std::minmax_element(ycoords.begin(), ycoords.begin() + 4);
-    //    //    min_y = *min_y_it;
-    //    //    max_y = *max_y_it;
-    //    //}
-    //    //for (int v = 0; v < resfo::NUM_CORNERS; v += 3) {
-    //    //    const double& x = corners[v];
-    //    //    const double& y = corners[v + 1];
-    //    //    this->min_x = std::min(this->min_x, x);
-    //    //    this->min_y = std::min(this->min_y, y);
-
-    //    //    this->max_x = std::max(this->max_x, x);
-    //    //    this->max_y = std::max(this->max_y, y);
-    //    //}
-    //}
-
     friend std::ostream& operator<<(std::ostream& os, const PillarBoundingBox& box);
 };
 
