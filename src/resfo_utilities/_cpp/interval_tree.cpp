@@ -27,19 +27,11 @@ std::vector<PillarBoundingBox> create_pillar_bounding_boxes(const float* coord,
             box.cell_index = {i, j, 0};
             for (int v = 0; v < 4; ++v) {
                 int idx = pillar_idx[v];
-                box.min_x = std::min(box.min_x, coord[idx]);
-                box.max_x = std::max(box.max_x, coord[idx]);
-
-                box.min_x = std::min(box.min_x, coord[idx + 3]);
-                box.max_x = std::max(box.max_x, coord[idx + 3]);
-            }
-            for (int v = 0; v < 4; ++v) {
-                int idx = pillar_idx[v];
-                box.min_y = std::min(box.min_y, coord[idx + 1]);
-                box.max_y = std::max(box.max_y, coord[idx + 1]);
-
-                box.min_y = std::min(box.min_y, coord[idx + 3 + 1]);
-                box.max_y = std::max(box.max_y, coord[idx + 3 + 1]);
+                // Top and bottom of each pillar line (6 floats: x,y,z,x,y,z).
+                box.min_x = std::min(box.min_x, std::min(coord[idx], coord[idx + 3]));
+                box.max_x = std::max(box.max_x, std::max(coord[idx], coord[idx + 3]));
+                box.min_y = std::min(box.min_y, std::min(coord[idx + 1], coord[idx + 4]));
+                box.max_y = std::max(box.max_y, std::max(coord[idx + 1], coord[idx + 4]));
             }
 
             boxes.push_back(std::move(box));
