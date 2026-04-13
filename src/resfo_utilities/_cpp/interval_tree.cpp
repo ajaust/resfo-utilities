@@ -201,9 +201,9 @@ int PillarIntervalTree::build(std::vector<PillarBoundingBox> boxes) {
 
     std::vector<PillarBoundingBox> left_boxes, right_boxes, spanning;
     for (auto& b : boxes) {
-        if (b.max_x < mid)      left_boxes.push_back(b);
-        else if (b.min_x > mid) right_boxes.push_back(b);
-        else                    spanning.push_back(b);
+        if (b.max_x < mid)      left_boxes.push_back(std::move(b));
+        else if (b.min_x > mid) right_boxes.push_back(std::move(b));
+        else                    spanning.push_back(std::move(b));
     }
 
     // Reserve to prevent reallocation invalidating our index during recursion.
@@ -214,7 +214,7 @@ int PillarIntervalTree::build(std::vector<PillarBoundingBox> boxes) {
     nodes_.emplace_back();
     nodes_[idx].mid    = mid;
     nodes_[idx].by_min = spanning;
-    nodes_[idx].by_max = spanning;
+    nodes_[idx].by_max = std::move(spanning);
     std::sort(nodes_[idx].by_min.begin(), nodes_[idx].by_min.end(),
               [](const auto& a, const auto& b) { return a.min_x < b.min_x; });
     std::sort(nodes_[idx].by_max.begin(), nodes_[idx].by_max.end(),
