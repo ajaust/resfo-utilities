@@ -1,4 +1,4 @@
-#include "interval_tree.hpp"
+#include "pillar_interval_tree.hpp"
 
 #include <algorithm>
 #include <cmath>

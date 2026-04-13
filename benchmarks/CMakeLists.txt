@@ -49,7 +49,7 @@ set(CPP_SRC ${CMAKE_CURRENT_SOURCE_DIR}/../src/resfo_utilities/_cpp)
 
 add_executable(bench_bounding_boxes
     ${CPP_SRC}/bench_bounding_boxes.cpp
-    ${CPP_SRC}/interval_tree.cpp
+    ${CPP_SRC}/pillar_interval_tree.cpp
     ${CPP_SRC}/point_in_cell.cpp
     ${CPP_SRC}/grid_search.cpp
 )
@@ -69,7 +69,7 @@ target_compile_options(bench_bounding_boxes PRIVATE
 
 add_executable(bench_find_cell
     ${CPP_SRC}/bench_find_cell.cpp
-    ${CPP_SRC}/interval_tree.cpp
+    ${CPP_SRC}/pillar_interval_tree.cpp
     ${CPP_SRC}/point_in_cell.cpp
     ${CPP_SRC}/grid_search.cpp
 )

@@ -8,7 +8,7 @@
 #include <pybind11/stl.h>
 
 #include "grid_search.hpp"
-#include "interval_tree.hpp"
+#include "pillar_interval_tree.hpp"
 #include "point_in_cell.hpp"
 
 #include <Eigen/Dense>

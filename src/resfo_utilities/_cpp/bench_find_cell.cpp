@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "grid_search.hpp"
-#include "interval_tree.hpp"
+#include "pillar_interval_tree.hpp"
 #include "point_in_cell.hpp"
 #include "bench_helpers.hpp"
 

@@ -8,7 +8,7 @@
 
 #include <Eigen/Dense>
 
-#include "interval_tree.hpp"
+#include "pillar_interval_tree.hpp"
 #include "grid.hpp"
 
 namespace resfo {

@@ -1,7 +1,7 @@
 #include <benchmark/benchmark.h>
 #include <vector>
 
-#include "interval_tree.hpp"
+#include "pillar_interval_tree.hpp"
 #include "grid.hpp"
 #include "bench_helpers.hpp"
 
