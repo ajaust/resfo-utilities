@@ -23,7 +23,7 @@ struct PillarBoundingBox {
     float max_y = std::numeric_limits<float>::lowest();
     float max_x = std::numeric_limits<float>::lowest();
 
-    bool contains_y(float y, float tol = 1e-6f) const {
+    bool overlaps_y(float y, float tol = 1e-6f) const {
         return (min_y - tol <= y && y <= max_y + tol);
     }
 

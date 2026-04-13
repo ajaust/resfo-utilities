@@ -100,7 +100,7 @@ void PillarIntervalTree::query_node(int idx, float x, float y, float tol,
         // to min_x <= x + tol. The list is sorted by min_x ascending: stop at first miss.
         for (const auto& b : node.by_min) {
             if (b.min_x > x + tol) break;
-            if (b.contains_y(y, tol))
+            if (b.overlaps_y(y, tol))
                  results.emplace_back(b.cell_index.i, b.cell_index.j);
         }
         query_node(node.left, x, y, tol, results);
@@ -109,7 +109,7 @@ void PillarIntervalTree::query_node(int idx, float x, float y, float tol,
         // to max_x >= x - tol. The list is sorted by max_x descending: stop at first miss.
         for (const auto& b : node.by_max) {
             if (b.max_x < x - tol) break;
-            if (b.contains_y(y, tol))
+            if (b.overlaps_y(y, tol))
                 results.emplace_back(b.cell_index.i, b.cell_index.j);
         }
         query_node(node.right, x, y, tol, results);
