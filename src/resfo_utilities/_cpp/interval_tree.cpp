@@ -206,10 +206,6 @@ int PillarIntervalTree::build(std::vector<PillarBoundingBox> boxes) {
         else                    spanning.push_back(std::move(b));
     }
 
-    // Reserve to prevent reallocation invalidating our index during recursion.
-    // Worst case: a full binary tree has 2*n - 1 nodes.
-    nodes_.reserve(nodes_.size() + 2 * boxes.size());
-
     int idx = static_cast<int>(nodes_.size());
     nodes_.emplace_back();
     nodes_[idx].mid    = mid;
@@ -272,7 +268,7 @@ PillarIntervalTree::PillarIntervalTree(std::vector<PillarBoundingBox> boxes) {
         }
     }
 
-    nodes_.reserve(2 * boxes.size());
+    nodes_.reserve(boxes.size());
     build(std::move(boxes));
 }
 
