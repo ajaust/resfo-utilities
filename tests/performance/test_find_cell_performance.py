@@ -119,6 +119,20 @@ def test_benchmark_find_cell_pillar_interval_tree_tilted_inside(
 
     benchmark(run)
 
+def test_benchmark_find_cell_tree_tilted_inside(
+    large_tilted_grid,
+    benchmark,
+):
+    def run():
+        pts = [
+            (i + 25.5 + TILT_FACTOR * 2.5, j + 25.5, 2.5)
+            for i, j in product(range(10), range(10))
+        ]
+        results = large_tilted_grid.find_cell_containing_point(pts)
+        assert all(r is not None for r in results)
+
+    benchmark(run)
+
 
 def test_benchmark_find_cell_pillar_interval_tree_tilted_outside(
     large_tilted_grid,
