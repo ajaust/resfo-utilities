@@ -61,6 +61,9 @@ int PillarIntervalTree::build(std::vector<PillarBoundingBox> boxes) {
         else if (b.min_x > mid) right_boxes.push_back(std::move(b));
         else                    spanning.push_back(std::move(b));
     }
+    // All content has been moved out of boxes by now, but clear to aboid
+    // accidental access to moved content.
+    boxes.clear();
 
     int idx = static_cast<int>(nodes_.size());
     nodes_.emplace_back();
