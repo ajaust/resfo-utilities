@@ -13,7 +13,8 @@
 
 namespace resfo {
 
-std::vector<PillarBoundingBox> create_pillar_bounding_boxes(const float* coord, const resfo::GridDimensions& dims) {
+std::vector<PillarBoundingBox> create_pillar_bounding_boxes(const float* coord,
+                                                            const resfo::GridDimensions& dims) {
     std::vector<PillarBoundingBox> boxes;
     boxes.reserve(dims.ni * dims.nj);
 
