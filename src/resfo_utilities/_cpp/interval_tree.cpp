@@ -278,6 +278,7 @@ PillarIntervalTree::PillarIntervalTree(std::vector<PillarBoundingBox> boxes) {
 
 std::vector<std::pair<int,int>> PillarIntervalTree::query(float x, float y, float tolerance) const {
     std::vector<std::pair<int,int>> results;
+    if (nodes_.empty()) return results;
     // Swap coordinates to match the axis the tree was built on.
     if (transposed_) std::swap(x, y);
     query_node(0, x, y, tolerance, results);
