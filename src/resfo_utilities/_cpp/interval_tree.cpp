@@ -49,7 +49,6 @@ std::vector<PillarBoundingBox> create_pillar_bounding_boxes(const float* coord, 
         }
     }
 
-
     return boxes;
 }
 

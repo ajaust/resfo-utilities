@@ -12,6 +12,8 @@
 
 namespace resfo {
 
+// Bounding box of a column of cells defined by for pillars of the corner-point
+// grid.
 struct PillarBoundingBox {
     resfo::CellIndex cell_index;
 
