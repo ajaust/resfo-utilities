@@ -53,6 +53,8 @@ std::vector<PillarBoundingBox> create_pillar_bounding_boxes(const float* coord, 
 }
 
 
+// When transposed_ is true, the x and y fields in each PillarBoundingBox
+// have been swapped so that the primary tree axis is always "x".
 int PillarIntervalTree::build(std::vector<PillarBoundingBox> boxes) {
     if (boxes.empty()) return -1;
 
@@ -86,6 +88,8 @@ int PillarIntervalTree::build(std::vector<PillarBoundingBox> boxes) {
     return idx;
 }
 
+// x and y here refer to the (possibly transposed) coordinates stored in each
+// PillarBoundingBox — see build() and the constructor for details.
 void PillarIntervalTree::query_node(int idx, float x, float y, float tol,
                                     std::vector<std::pair<int,int>>& results) const {
     if (idx == -1) return;
