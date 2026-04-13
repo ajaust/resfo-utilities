@@ -75,62 +75,6 @@ static void BM_GridSearch(benchmark::State& state)
 }
 
 template<PointSet MakePoints>
-static void BM_GridSearchIntervalTree(benchmark::State& state)
-{
-    const int ni = state.range(0);
-    const int nj = state.range(0);
-    const int nk = state.range(1);
-    const int n_pts = state.range(2);
-
-    std::vector<float> coord, zcorn;
-    make_grid(ni, nj, nk, coord, zcorn);
-    resfo::GridDimensions dims{ni, nj, nk};
-
-    auto [z_min_it, z_max_it] = std::minmax_element(zcorn.begin(), zcorn.end());
-    auto top = resfo::pillar_z_intersection(coord.data(), dims, *z_min_it);
-    auto bot = resfo::pillar_z_intersection(coord.data(), dims, *z_max_it);
-
-    auto bboxes = resfo::create_bounding_boxes(coord.data(), zcorn.data(), dims);
-    resfo::IntervalTree2D tree(std::move(bboxes));
-
-    auto points = MakePoints(ni, nj, nk, n_pts);
-
-    for (auto _ : state) {
-        for (const auto& p : points) {
-            auto r = resfo::grid_search_interval_tree(p, coord.data(), zcorn.data(), dims, top, bot, 1e-6f, tree);
-            benchmark::DoNotOptimize(r);
-        }
-    }
-    state.SetItemsProcessed(state.iterations() * n_pts);
-}
-
-template<PointSet MakePoints>
-static void BM_GridSearchPillarTree(benchmark::State& state)
-{
-    const int ni = state.range(0);
-    const int nj = state.range(0);
-    const int nk = state.range(1);
-    const int n_pts = state.range(2);
-
-    std::vector<float> coord, zcorn;
-    make_grid(ni, nj, nk, coord, zcorn);
-    resfo::GridDimensions dims{ni, nj, nk};
-
-    auto pillar_bboxes = resfo::create_pillar_bounding_boxes(coord.data(), dims);
-    resfo::PillarTree2D tree(std::move(pillar_bboxes));
-
-    auto points = MakePoints(ni, nj, nk, n_pts);
-
-    for (auto _ : state) {
-        for (const auto& p : points) {
-            auto r = resfo::grid_search_pillar_tree(p, coord.data(), zcorn.data(), dims, 1e-6f, tree);
-            benchmark::DoNotOptimize(r);
-        }
-    }
-    state.SetItemsProcessed(state.iterations() * n_pts);
-}
-
-template<PointSet MakePoints>
 static void BM_GridSearchPillarIntervalTree(benchmark::State& state)
 {
     const int ni = state.range(0);
@@ -195,32 +139,6 @@ static void BM_GridSearch_Custom(benchmark::State& state)
 }
 
 template<GridFactory MakeGrid, PointSet MakePoints>
-static void BM_GridSearchPillarTree_Custom(benchmark::State& state)
-{
-    const int ni = state.range(0);
-    const int nj = state.range(0);
-    const int nk = state.range(1);
-    const int n_pts = state.range(2);
-
-    std::vector<float> coord, zcorn;
-    MakeGrid(ni, nj, nk, coord, zcorn);
-    resfo::GridDimensions dims{ni, nj, nk};
-
-    auto pillar_bboxes = resfo::create_pillar_bounding_boxes(coord.data(), dims);
-    resfo::PillarTree2D tree(std::move(pillar_bboxes));
-
-    auto points = MakePoints(ni, nj, nk, n_pts);
-
-    for (auto _ : state) {
-        for (const auto& p : points) {
-            auto r = resfo::grid_search_pillar_tree(p, coord.data(), zcorn.data(), dims, 1e-6f, tree);
-            benchmark::DoNotOptimize(r);
-        }
-    }
-    state.SetItemsProcessed(state.iterations() * n_pts);
-}
-
-template<GridFactory MakeGrid, PointSet MakePoints>
 static void BM_GridSearchPillarIntervalTree_Custom(benchmark::State& state)
 {
     const int ni = state.range(0);
@@ -251,20 +169,16 @@ static void BM_GridSearchPillarIntervalTree_Custom(benchmark::State& state)
 
 // Tilted grid (pillars lean 0.5 units per depth unit → heavy bbox overlap)
 REGISTER_CUSTOM(BM_GridSearch_Custom,                   make_grid_tilted, make_points_tilted_inside,  100);
-REGISTER_CUSTOM(BM_GridSearchPillarTree_Custom,         make_grid_tilted, make_points_tilted_inside,  100);
 REGISTER_CUSTOM(BM_GridSearchPillarIntervalTree_Custom, make_grid_tilted, make_points_tilted_inside,  100);
 
 REGISTER_CUSTOM(BM_GridSearch_Custom,                   make_grid_tilted, make_points_tilted_outside, 100);
-REGISTER_CUSTOM(BM_GridSearchPillarTree_Custom,         make_grid_tilted, make_points_tilted_outside, 100);
 REGISTER_CUSTOM(BM_GridSearchPillarIntervalTree_Custom, make_grid_tilted, make_points_tilted_outside, 100);
 
 // Faulted grid (j >= nj/2 thrown down by 5 depth units)
 REGISTER_CUSTOM(BM_GridSearch_Custom,                   make_grid_faulted, make_points_faulted_inside,  100);
-REGISTER_CUSTOM(BM_GridSearchPillarTree_Custom,         make_grid_faulted, make_points_faulted_inside,  100);
 REGISTER_CUSTOM(BM_GridSearchPillarIntervalTree_Custom, make_grid_faulted, make_points_faulted_inside,  100);
 
 REGISTER_CUSTOM(BM_GridSearch_Custom,                   make_grid_faulted, make_points_faulted_outside, 100);
-REGISTER_CUSTOM(BM_GridSearchPillarTree_Custom,         make_grid_faulted, make_points_faulted_outside, 100);
 REGISTER_CUSTOM(BM_GridSearchPillarIntervalTree_Custom, make_grid_faulted, make_points_faulted_outside, 100);
 
 
@@ -274,20 +188,14 @@ REGISTER_CUSTOM(BM_GridSearchPillarIntervalTree_Custom, make_grid_faulted, make_
 
 // All inside
 REGISTER(BM_GridSearch,                   inside,  100);
-REGISTER(BM_GridSearchIntervalTree,       inside,  100);
-REGISTER(BM_GridSearchPillarTree,         inside,  100);
 REGISTER(BM_GridSearchPillarIntervalTree, inside,  100);
 
 // All outside
 REGISTER(BM_GridSearch,                   outside, 100);
-REGISTER(BM_GridSearchIntervalTree,       outside, 100);
-REGISTER(BM_GridSearchPillarTree,         outside, 100);
 REGISTER(BM_GridSearchPillarIntervalTree, outside, 100);
 
 // 5% outside
 REGISTER(BM_GridSearch,                   mixed,   100);
-REGISTER(BM_GridSearchIntervalTree,       mixed,   100);
-REGISTER(BM_GridSearchPillarTree,         mixed,   100);
 REGISTER(BM_GridSearchPillarIntervalTree, mixed,   100);
 
 BENCHMARK_MAIN();
