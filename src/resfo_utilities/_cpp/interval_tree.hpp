@@ -35,10 +35,9 @@ std::vector<PillarBoundingBox> create_pillar_bounding_boxes(
     const resfo::GridDimensions& dims
 );
 
-// True 2D interval tree over PillarBoundingBox.
+// 2D interval tree over PillarBoundingBox.
 // The X dimension is indexed with a classic interval tree (O(log n + k') stabbing query);
-// each candidate is then filtered by Y containment. This avoids the spatial hash's
-// worst-case behaviour when bounding boxes are large (e.g. heavily tilted pillars).
+// each candidate is then filtered by Y containment.
 class PillarIntervalTree {
 private:
     struct Node {
