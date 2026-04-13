@@ -131,6 +131,7 @@ std::vector<PillarBoundingBox> create_pillar_bounding_boxes(const float* coord, 
                 box.min_y = std::min(box.min_y, coord[idx + 3 + 1]);
                 box.max_y = std::max(box.max_y, coord[idx + 3 + 1]);
             }
+
             boxes.push_back(std::move(box));
         }
     }
