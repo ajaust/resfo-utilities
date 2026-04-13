@@ -139,4 +139,4 @@ std::vector<std::pair<int,int>> PillarIntervalTree::query(float x, float y, floa
     return results;
 }
 
-} /* namespace resfo */
+}  // namespace resfo

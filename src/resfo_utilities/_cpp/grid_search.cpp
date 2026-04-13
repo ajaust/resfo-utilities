@@ -12,8 +12,7 @@ namespace resfo {
 std::optional<CellIndex> grid_search(
     const Eigen::Vector3d& p, const float* coord, const float* zcorn, const GridDimensions& dims,
     const std::vector<float>& top, const std::vector<float>& bot, float tolerance,
-    std::optional<std::pair<int, int>> prev_ij
-    ) {
+    std::optional<std::pair<int, int>> prev_ij) {
 
     float bound_tol = 20.0*tolerance;
 

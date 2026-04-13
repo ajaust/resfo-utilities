@@ -83,4 +83,4 @@ public:
                                           float tolerance = 1.e-6f) const;
 };
 
-} /* namespace resfo */
+}  // namespace resfo
