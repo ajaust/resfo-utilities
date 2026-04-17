@@ -183,6 +183,63 @@ std::vector<std::optional<std::tuple<int, int, int>>> find_cells_containing_poin
     return results;
 }
 
+std::vector<std::optional<std::tuple<int, int, int>>> find_cells_containing_points_hybrid(
+    py::array_t<float, py::array::c_style | py::array::forcecast> points_array,
+    py::array_t<float, py::array::c_style | py::array::forcecast> coord_array,
+    py::array_t<float, py::array::c_style | py::array::forcecast> zcorn_array,
+    float tolerance) {
+
+    auto points_buf = points_array.request();
+    auto coord_buf = coord_array.request();
+    auto zcorn_buf = zcorn_array.request();
+
+    if (points_buf.ndim != 2 || points_buf.shape[1] != 3)
+        throw std::runtime_error("Points array must have shape (n, 3)");
+    if (coord_buf.ndim != 4 || coord_buf.shape[2] != 2 || coord_buf.shape[3] != 3)
+        throw std::runtime_error("Coord array must have shape (ni+1, nj+1, 2, 3)");
+    if (zcorn_buf.ndim != 4 || zcorn_buf.shape[3] != 8)
+        throw std::runtime_error("Zcorn array must have shape (ni, nj, nk, 8)");
+
+    const float* points = static_cast<const float*>(points_buf.ptr);
+    const float* coord  = static_cast<const float*>(coord_buf.ptr);
+    const float* zcorn  = static_cast<const float*>(zcorn_buf.ptr);
+
+    auto zcorn_shape = zcorn_buf.shape;
+    resfo::GridDimensions dims{
+        static_cast<int>(zcorn_shape[0]),
+        static_cast<int>(zcorn_shape[1]),
+        static_cast<int>(zcorn_shape[2])
+    };
+
+    auto pillar_bboxes = resfo::create_pillar_bounding_boxes(coord, dims);
+    resfo::PillarIntervalTree tree(std::move(pillar_bboxes));
+
+    const size_t num_points = points_buf.shape[0];
+    std::optional<std::pair<int, int>> prev_ij;
+    std::vector<std::optional<std::tuple<int, int, int>>> results;
+    results.reserve(num_points);
+
+    for (size_t p_idx = 0; p_idx < num_points; ++p_idx) {
+        Eigen::Vector3d p{
+            points[p_idx * 3],
+            points[p_idx * 3 + 1],
+            points[p_idx * 3 + 2]
+        };
+
+        auto result = resfo::grid_search_hybrid(p, coord, zcorn, dims, tolerance, tree, prev_ij);
+
+        if (result.has_value()) {
+            results.push_back(std::make_tuple(result->i, result->j, result->k));
+            prev_ij = std::make_pair(result->i, result->j);
+        }
+        else {
+            results.push_back(std::nullopt);
+            prev_ij = std::nullopt;
+        }
+    }
+    return results;
+}
+
 PYBIND11_MODULE(_grid_cpp, m) {
     m.doc() = "Fast C++ implementation of grid search algorithms";
 
@@ -194,6 +251,13 @@ PYBIND11_MODULE(_grid_cpp, m) {
           "Find cells containing given points");
 
     m.def("find_cells_containing_points_pillar_interval_tree", &find_cells_containing_points_pillar_interval_tree,
+          py::arg("points"),
+          py::arg("coord"),
+          py::arg("zcorn"),
+          py::arg("tolerance") = 1e-6f,
+          "Find cells containing given points using pillar bounding box interval tree");
+
+    m.def("find_cells_containing_points_hybrid", &find_cells_containing_points_hybrid,
           py::arg("points"),
           py::arg("coord"),
           py::arg("zcorn"),

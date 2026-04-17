@@ -1,5 +1,6 @@
 #include "grid_search.hpp"
 
+#include <iostream>
 #include <unordered_set>
 #include <queue>
 #include <vector>
@@ -88,6 +89,65 @@ std::optional<CellIndex> grid_search_pillar_interval_tree(
     }
 
     auto columns = tree.query(static_cast<float>(p[0]), static_cast<float>(p[1]), bound_tol);
+
+    struct Candidate {
+        int i, j, k;
+        float z_dist;
+    };
+    std::vector<Candidate> candidates;
+    candidates.reserve(columns.size() * dims.nk);
+
+    //std::cout << "Number of candidate columns: " << columns.size() << std::endl;
+    const float pz = static_cast<float>(p[2]);
+    for (const auto& [ci, cj] : columns) {
+        for (int k = 0; k < dims.nk; ++k) {
+            int zcorn_idx = (ci * dims.nj * dims.nk + cj * dims.nk + k) * NUM_CORNERS;
+            auto [z_min_it, z_max_it] = std::minmax_element(
+                zcorn + zcorn_idx, zcorn + zcorn_idx + NUM_CORNERS);
+            float z_center = (*z_min_it + *z_max_it) * 0.5f;
+            if (p[2] >= *z_min_it - 2 * bound_tol && p[2] <= *z_max_it + 2 * bound_tol) {
+                candidates.push_back({ci, cj, k, std::abs(z_center - pz)});
+            }
+        }
+    }
+
+    std::sort(candidates.begin(), candidates.end(),
+              [](const Candidate& a, const Candidate& b) { return a.z_dist < b.z_dist; });
+
+    for (const auto& c : candidates) {
+        if (resfo::point_in_cell(p, c.i, c.j, c.k, coord, zcorn, dims, tolerance)) {
+            return CellIndex{c.i, c.j, c.k};
+        }
+    }
+
+    return std::nullopt;
+}
+std::optional<CellIndex> grid_search_hybrid(
+    const Eigen::Vector3d& p, const float* coord, const float* zcorn, const GridDimensions& dims,
+    float tolerance, const PillarIntervalTree& tree,
+    std::optional<std::pair<int, int>> prev_ij) {
+
+    float bound_tol = 20.0f * tolerance;
+
+    if (dims.ni <= 0 || dims.nj <= 0 || dims.nk <= 0) {
+        return std::nullopt;
+    }
+
+    auto columns = tree.query(static_cast<float>(p[0]), static_cast<float>(p[1]), bound_tol);
+
+    constexpr double max_column_candidates_percentage = 1;
+    const int number_of_grid_columns = dims.ni * dims.nj;
+
+    // If we get many columns as candidates, the pillar tree does not reduce
+    // the search space sufficiently.
+    //std::cout << "Number of candidate columns: " << columns.size() << " out of " << number_of_grid_columns
+    //          << " (" << (100.0 * columns.size() / number_of_grid_columns) << "%)" << std::endl;
+    //if ( columns.size() >= max_column_candidates_percentage / 100.0 * number_of_grid_columns) {
+    if ( columns.size() > 4) {
+        //std::cout <<"Too many candidate columns, falling back to pure grid search." << std::endl;
+        return grid_search(p, coord, zcorn, dims, pillar_z_intersection(coord, dims, p[2]),
+                           pillar_z_intersection(coord, dims, p[2]), tolerance, prev_ij);
+    }
 
     struct Candidate {
         int i, j, k;

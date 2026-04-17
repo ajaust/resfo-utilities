@@ -105,6 +105,42 @@ def test_benchmark_find_cell_pillar_interval_tree_but_point_outside(
     benchmark(run)
 
 
+def test_benchmark_find_cell_hybrid(large_regular_grid, benchmark):
+    def run():
+        assert large_regular_grid.find_cell_containing_point_hybrid(
+            [(i + 25.5, j + 25.5, 2.5) for i, j in product(range(10), range(10))],
+        ) == [(i + 25, j + 25, 2) for i, j in product(range(10), range(10))]
+
+    benchmark(run)
+
+
+def test_benchmark_find_cell_hybrid_but_point_outside(
+    large_regular_grid,
+    benchmark,
+):
+    def run():
+        assert large_regular_grid.find_cell_containing_point_hybrid(
+            [(i + 125.5, j + 125.5, 20.5) for i, j in product(range(10), range(10))],
+        ) == [None for i, j in product(range(10), range(10))]
+
+    benchmark(run)
+
+
+def test_benchmark_find_cell_tilted_inside(
+    large_tilted_grid,
+    benchmark,
+):
+    def run():
+        pts = [
+            (i + 25.5 + TILT_FACTOR * 2.5, j + 25.5, 2.5)
+            for i, j in product(range(10), range(10))
+        ]
+        results = large_tilted_grid.find_cell_containing_point(pts)
+        assert all(r is not None for r in results)
+
+    benchmark(run)
+
+
 def test_benchmark_find_cell_pillar_interval_tree_tilted_inside(
     large_tilted_grid,
     benchmark,
@@ -120,7 +156,7 @@ def test_benchmark_find_cell_pillar_interval_tree_tilted_inside(
     benchmark(run)
 
 
-def test_benchmark_find_cell_tree_tilted_inside(
+def test_benchmark_find_cell_hybrid_tilted_inside(
     large_tilted_grid,
     benchmark,
 ):
@@ -129,8 +165,23 @@ def test_benchmark_find_cell_tree_tilted_inside(
             (i + 25.5 + TILT_FACTOR * 2.5, j + 25.5, 2.5)
             for i, j in product(range(10), range(10))
         ]
-        results = large_tilted_grid.find_cell_containing_point(pts)
+        results = large_tilted_grid.find_cell_containing_point_hybrid(pts)
         assert all(r is not None for r in results)
+
+    benchmark(run)
+
+
+def test_benchmark_find_cell_tilted_outside(
+    large_tilted_grid,
+    benchmark,
+):
+    x_shift = (50 + TILT_FACTOR * 10) * 10
+    pts = [(x_shift + i, j + 25.5, 2.5) for i, j in product(range(10), range(10))]
+
+    def run():
+        assert large_tilted_grid.find_cell_containing_point(
+            pts,
+        ) == [None for _ in pts]
 
     benchmark(run)
 
@@ -150,9 +201,55 @@ def test_benchmark_find_cell_pillar_interval_tree_tilted_outside(
     benchmark(run)
 
 
+def test_benchmark_find_cell_hybrid_tilted_outside(
+    large_tilted_grid,
+    benchmark,
+):
+    x_shift = (50 + TILT_FACTOR * 10) * 10
+    pts = [(x_shift + i, j + 25.5, 2.5) for i, j in product(range(10), range(10))]
+
+    def run():
+        assert large_tilted_grid.find_cell_containing_point_hybrid(
+            pts,
+        ) == [None for _ in pts]
+
+    benchmark(run)
+
+
 # ---------------------------------------------------------------------------
 # Faulted grid benchmarks (downthrown block shifted down by FAULT_THROW)
 # ---------------------------------------------------------------------------
+
+
+def test_benchmark_find_cell_faulted_inside(
+    large_faulted_grid,
+    benchmark,
+):
+    pts = [(i + 25.5, j + 20.5, 2.5) for i, j in product(range(5), range(5))] + [
+        (i + 25.5, j + 25.5, 2.5 + FAULT_THROW) for i, j in product(range(5), range(5))
+    ]
+
+    def run():
+        results = large_faulted_grid.find_cell_containing_point(
+            pts,
+        )
+        assert all(r is not None for r in results)
+
+    benchmark(run)
+
+
+def test_benchmark_find_cell_faulted_outside(
+    large_faulted_grid,
+    benchmark,
+):
+    pts = [(i + 125.5, j + 125.5, 20.5) for i, j in product(range(10), range(10))]
+
+    def run():
+        assert large_faulted_grid.find_cell_containing_point(
+            pts,
+        ) == [None for _ in pts]
+
+    benchmark(run)
 
 
 def test_benchmark_find_cell_pillar_interval_tree_faulted_inside(
@@ -180,6 +277,37 @@ def test_benchmark_find_cell_pillar_interval_tree_faulted_outside(
 
     def run():
         assert large_faulted_grid.find_cell_containing_point_pillar_interval_tree(
+            pts,
+        ) == [None for _ in pts]
+
+    benchmark(run)
+
+
+def test_benchmark_find_cell_hybrid_faulted_inside(
+    large_faulted_grid,
+    benchmark,
+):
+    pts = [(i + 25.5, j + 20.5, 2.5) for i, j in product(range(5), range(5))] + [
+        (i + 25.5, j + 25.5, 2.5 + FAULT_THROW) for i, j in product(range(5), range(5))
+    ]
+
+    def run():
+        results = large_faulted_grid.find_cell_containing_point_hybrid(
+            pts,
+        )
+        assert all(r is not None for r in results)
+
+    benchmark(run)
+
+
+def test_benchmark_find_cell_hybrid_faulted_outside(
+    large_faulted_grid,
+    benchmark,
+):
+    pts = [(i + 125.5, j + 125.5, 20.5) for i, j in product(range(10), range(10))]
+
+    def run():
+        assert large_faulted_grid.find_cell_containing_point_hybrid(
             pts,
         ) == [None for _ in pts]
 

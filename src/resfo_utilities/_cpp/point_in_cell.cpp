@@ -177,7 +177,7 @@ bool point_in_cell(const Eigen::Vector3d& point, int i, int j, int k, const floa
 
     return
         summary.termination_type == ceres::CONVERGENCE &&
-        summary.final_cost < tolerance;
+        summary.final_cost < 0.5 * tolerance_squared;
 }
 
 }  // namespace resfo
