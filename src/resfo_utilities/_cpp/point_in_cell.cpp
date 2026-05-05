@@ -2,96 +2,74 @@
 
 #include <cmath>
 #include <array>
+#include <algorithm>
 
 #include <Eigen/Dense>
-#include "ceres/ceres.h"
 
 namespace resfo {
 
 /*
- * To determine whether the point is a given cell,
- * the inverse of a trilinear hexahedral (Q1) finite-element mapping
- * is solved. If it has a solution then the point is in the cell.
- * see "The Finite Element Method: A Practical Course" G. R. Liu & S. S. Quek chapter 9.3.
+ * To determine whether the point is in a given cell, the inverse of a
+ * trilinear hexahedral (Q1) finite-element mapping is solved.  If the
+ * solution (ξ, η, ζ) lies in [-1, 1]³ the point is inside the cell.
+ *
+ * Reference: "The Finite Element Method: A Practical Course"
+ *            G. R. Liu & S. S. Quek, chapter 9.3.
+ *
+ * The solver is a bounded Levenberg–Marquardt for the 3×3 nonlinear
+ * least-squares problem  min ½‖F(x) − p‖²  with x ∈ [-1,1]³, using
+ * the analytic Jacobian of the trilinear shape functions.
  */
 
-struct HexInverseCost : ceres::CostFunction {
-    private:
-    const std::vector<double> corners;  // The corners of the cell, size 24 (8 × 3)
-    Eigen::Vector3d point;
+// Reference-cube corner signs: (ξ, η, ζ) ∈ {-1, +1}³.
+static constexpr std::array<std::array<int,3>, NUM_CORNERS> ref_corners = {{
+    {-1, -1, -1}, {1, -1, -1}, {-1, 1, -1}, {1, 1, -1},
+    {-1, -1,  1}, {1, -1,  1}, {-1, 1,  1}, {1, 1,  1}
+}};
 
+// Evaluate the trilinear mapping residual r = F(x) − point and its
+// Jacobian J = dF/dx.  Both are written in-place; J is only written
+// when compute_jacobian is true.
+static inline void evaluate_trilinear(
+    const Eigen::Vector3d& x,
+    const double* corners,
+    const Eigen::Vector3d& point,
+    Eigen::Vector3d& residual,
+    Eigen::Matrix3d& J,
+    bool compute_jacobian)
+{
+    const double xi   = x[0];
+    const double eta  = x[1];
+    const double zeta = x[2];
 
-    static constexpr std::array<std::array<int,3>,NUM_CORNERS> reference_cube_corners = {{
-        {-1, -1, -1}, {1, -1, -1}, {-1, 1, -1}, {1, 1, -1},
-        {-1, -1, 1},  {1, -1, 1},  {-1, 1, 1},  {1, 1, 1}
-    }};
+    Eigen::Vector3d mapped = Eigen::Vector3d::Zero();
+    if (compute_jacobian) J.setZero();
 
-    public:
-    HexInverseCost(std::vector<double>&& v, const Eigen::Vector3d& p)
-        : corners(std::move(v)), point(p) {
-        set_num_residuals(3);
-        *mutable_parameter_block_sizes() = {3};
-        }
+    for (int v = 0; v < NUM_CORNERS; ++v) {
+        const double sx = ref_corners[v][0];
+        const double sy = ref_corners[v][1];
+        const double sz = ref_corners[v][2];
 
-    bool Evaluate(
-        const double* const* parameters,
-        double* residuals,
-        double** jacobians
-    ) const override {
-        const double xi   = parameters[0][0];
-        const double eta  = parameters[0][1];
-        const double zeta = parameters[0][2];
+        const double N = 0.125 * (1 + xi * sx) * (1 + eta * sy) * (1 + zeta * sz);
 
-        Eigen::Vector3d mapped(0.0, 0.0, 0.0);
+        for (int d = 0; d < 3; ++d)
+            mapped[d] += N * corners[v * 3 + d];
 
-        for (int v = 0; v < NUM_CORNERS; ++v) {
-            double shape =
-                0.125 * (1 + xi   * reference_cube_corners[v][0]) *
-                        (1 + eta  * reference_cube_corners[v][1]) *
-                        (1 + zeta * reference_cube_corners[v][2]);
+        if (compute_jacobian) {
+            const double dN_dxi   = 0.125 * sx * (1 + eta * sy) * (1 + zeta * sz);
+            const double dN_deta  = 0.125 * sy * (1 + xi  * sx) * (1 + zeta * sz);
+            const double dN_dzeta = 0.125 * sz * (1 + xi  * sx) * (1 + eta  * sy);
 
-            mapped[0] += shape * corners[v * 3 + 0];
-            mapped[1] += shape * corners[v * 3 + 1];
-            mapped[2] += shape * corners[v * 3 + 2];
-        }
-
-        Eigen::Vector3d r = mapped - point;
-        residuals[0] = r[0];
-        residuals[1] = r[1];
-        residuals[2] = r[2];
-
-        if (jacobians && jacobians[0]) {
-            Eigen::Map<Eigen::Matrix<double,3,3,Eigen::RowMajor>> J(jacobians[0]);
-            J.setZero();
-
-            for (int v = 0; v < NUM_CORNERS; ++v) {
-                // N is here the shape function
-                double dN_dxi =
-                    0.125 * reference_cube_corners[v][0] *
-                    (1 + eta  * reference_cube_corners[v][1]) *
-                    (1 + zeta * reference_cube_corners[v][2]);
-
-                double dN_deta =
-                    0.125 * reference_cube_corners[v][1] *
-                    (1 + xi   * reference_cube_corners[v][0]) *
-                    (1 + zeta * reference_cube_corners[v][2]);
-
-                double dN_dzeta =
-                    0.125 * reference_cube_corners[v][2] *
-                    (1 + xi   * reference_cube_corners[v][0]) *
-                    (1 + eta  * reference_cube_corners[v][1]);
-
-                for (int dim = 0; dim < 3; ++dim) {
-                    J(dim, 0) += dN_dxi   * corners[v * 3 + dim];
-                    J(dim, 1) += dN_deta  * corners[v * 3 + dim];
-                    J(dim, 2) += dN_dzeta * corners[v * 3 + dim];
-                }
+            for (int d = 0; d < 3; ++d) {
+                J(d, 0) += dN_dxi   * corners[v * 3 + d];
+                J(d, 1) += dN_deta  * corners[v * 3 + d];
+                J(d, 2) += dN_dzeta * corners[v * 3 + d];
             }
         }
-
-        return true;
     }
-};
+
+    residual = mapped - point;
+}
 
 std::vector<double> cell_corners(int i, int j, int k, const float* coord, const float* zcorn,
                                  const GridDimensions& dims) {
@@ -140,44 +118,77 @@ std::vector<double> cell_corners(int i, int j, int k, const float* coord, const 
 bool point_in_cell(const Eigen::Vector3d& point, int i, int j, int k, const float* coord,
                    const float* zcorn, const GridDimensions& dims, float tolerance) {
 
-    auto corners = cell_corners(i, j, k, coord, zcorn, dims);
-    double xi_eta_zeta[3] = {0.0, 0.0, 0.0}; // initial guess
+    auto corners_vec = cell_corners(i, j, k, coord, zcorn, dims);
+    const double* corners = corners_vec.data();
 
-    ceres::Problem problem;
+    const double tol_sq = static_cast<double>(tolerance) * static_cast<double>(tolerance);
+    constexpr int max_iterations = 20;
 
-    problem.AddParameterBlock(xi_eta_zeta, 3);
+    // Levenberg–Marquardt state
+    Eigen::Vector3d x(0.0, 0.0, 0.0);  // initial guess: cell center
+    Eigen::Vector3d r;
+    Eigen::Matrix3d J;
 
-    // Enforce [-1,1] bounds
-    for (int i = 0; i < 3; ++i) {
-        problem.SetParameterLowerBound(xi_eta_zeta, i, -1.0);
-        problem.SetParameterUpperBound(xi_eta_zeta, i,  1.0);
+    evaluate_trilinear(x, corners, point, r, J, /*compute_jacobian=*/true);
+    double cost = 0.5 * r.squaredNorm();
+
+    if (cost < 0.5 * tol_sq)
+        return true;
+
+    double lambda = 1e-3 * J.diagonal().array().abs().maxCoeff();
+    if (lambda < 1e-10) lambda = 1e-6;
+    double nu = 2.0;
+
+    for (int iter = 0; iter < max_iterations; ++iter) {
+        // Solve (J^T J + λ I) δ = -J^T r
+        Eigen::Matrix3d JtJ = J.transpose() * J;
+        Eigen::Vector3d Jtr = J.transpose() * r;
+        JtJ.diagonal().array() += lambda;
+
+        Eigen::Vector3d delta = JtJ.ldlt().solve(-Jtr);
+
+        // Box-project to [-1, 1]³
+        Eigen::Vector3d x_new = (x + delta).cwiseMax(-1.0).cwiseMin(1.0);
+        Eigen::Vector3d actual_delta = x_new - x;
+
+        Eigen::Vector3d r_new;
+        Eigen::Matrix3d J_new;
+        evaluate_trilinear(x_new, corners, point, r_new, J_new, false);
+        double cost_new = 0.5 * r_new.squaredNorm();
+
+        // Gain ratio: actual reduction / predicted reduction
+        double predicted = -actual_delta.dot(Jtr) - 0.5 * actual_delta.dot(JtJ * actual_delta);
+        if (predicted < 1e-30) predicted = 1e-30;
+        double gain_ratio = (cost - cost_new) / predicted;
+
+        if (gain_ratio > 0) {
+            // Accept step
+            x = x_new;
+            r = r_new;
+            cost = cost_new;
+
+            if (cost < 0.5 * tol_sq)
+                return true;
+
+            // Recompute Jacobian at the new point
+            evaluate_trilinear(x, corners, point, r, J, true);
+
+            // Adjust damping (Nielsen update)
+            double factor = 1.0 - std::pow(2.0 * gain_ratio - 1.0, 3);
+            lambda *= std::max(factor, 1.0 / 3.0);
+            nu = 2.0;
+        } else {
+            // Reject step, increase damping
+            lambda *= nu;
+            nu *= 2.0;
+        }
+
+        // If lambda grows too large, the step is effectively zero — give up.
+        if (lambda > 1e16)
+            return false;
     }
 
-
-    HexInverseCost* cost_function = new HexInverseCost(std::move(corners), point);
-
-    problem.AddResidualBlock(
-        cost_function,
-        nullptr, // no robust loss needed
-        xi_eta_zeta
-    );
-
-    double tolerance_squared = static_cast<double>(tolerance) * static_cast<double>(tolerance);
-    ceres::Solver::Options options;
-    options.linear_solver_type = ceres::DENSE_QR;
-    options.minimizer_progress_to_stdout = false;
-    options.max_num_iterations = 50;
-    options.function_tolerance = tolerance_squared;
-    options.gradient_tolerance = tolerance_squared;
-    options.parameter_tolerance = tolerance_squared;
-    options.logging_type = ceres::SILENT;
-
-    ceres::Solver::Summary summary;
-    ceres::Solve(options, &problem, &summary);
-
-    return
-        summary.termination_type == ceres::CONVERGENCE &&
-        summary.final_cost < 0.5 * tolerance_squared;
+    return cost < 0.5 * tol_sq;
 }
 
 }  // namespace resfo
