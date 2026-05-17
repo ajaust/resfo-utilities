@@ -106,7 +106,10 @@ std::array<double, NUM_CORNERS * 3> cell_corners(
         const auto& p_bot = bot[p_idx];
 
         float height_diff = p_bot[2] - p_top[2];
-        float t = (z_values[v] - p_top[2]) / height_diff;
+        // Vertical pillar (zero height_diff): all points coincide with top.
+        float t = (height_diff != 0.0f)
+            ? (z_values[v] - p_top[2]) / height_diff
+            : 0.0f;
 
         vertices[v * 3] = p_top[0] + t * (p_bot[0] - p_top[0]);
         vertices[v * 3 + 1] = p_top[1] + t * (p_bot[1] - p_top[1]);
