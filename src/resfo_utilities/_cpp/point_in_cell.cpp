@@ -71,20 +71,21 @@ static inline void evaluate_trilinear(
     residual = mapped - point;
 }
 
-std::vector<double> cell_corners(int i, int j, int k, const float* coord, const float* zcorn,
-                                 const GridDimensions& dims) {
-    std::vector<double> vertices(24, 0.0);
+std::array<double, NUM_CORNERS * 3> cell_corners(
+        int i, int j, int k, const float* coord, const float* zcorn,
+        const GridDimensions& dims) {
+    std::array<double, NUM_CORNERS * 3> vertices{};
 
     // Pillar indices for the four corners of the cell (i,j)
     // (i,j), (i,j+1), (i+1,j), (i+1,j+1)
-    int pillar_idx[4] = {
+    std::array<int, 4> pillar_idx = {
         (i * (dims.nj + 1) + j) * 6,
         (i * (dims.nj + 1) + (j + 1)) * 6,
         ((i + 1) * (dims.nj + 1) + j) * 6,
         ((i + 1) * (dims.nj + 1) + (j + 1)) * 6
     };
 
-    std::array<float, 3> top[4], bot[4];
+    std::array<std::array<float, 3>, 4> top{}, bot{};
     for (int p = 0; p < 4; ++p) {
         top[p] = {coord[pillar_idx[p]], coord[pillar_idx[p] + 1], coord[pillar_idx[p] + 2]};
         bot[p] = {coord[pillar_idx[p] + 3], coord[pillar_idx[p] + 4], coord[pillar_idx[p] + 5]};
@@ -118,8 +119,8 @@ std::vector<double> cell_corners(int i, int j, int k, const float* coord, const 
 bool point_in_cell(const Eigen::Vector3d& point, int i, int j, int k, const float* coord,
                    const float* zcorn, const GridDimensions& dims, float tolerance) {
 
-    auto corners_vec = cell_corners(i, j, k, coord, zcorn, dims);
-    const double* corners = corners_vec.data();
+    auto corners_arr = cell_corners(i, j, k, coord, zcorn, dims);
+    const double* corners = corners_arr.data();
 
     const double tol_sq = static_cast<double>(tolerance) * static_cast<double>(tolerance);
     constexpr int max_iterations = 20;
