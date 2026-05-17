@@ -123,6 +123,7 @@ std::optional<CellIndex> grid_search_pillar_interval_tree(
 
 std::optional<CellIndex> grid_search_hybrid(
     const Eigen::Vector3d& p, const float* coord, const float* zcorn, const GridDimensions& dims,
+    const std::vector<float>& top, const std::vector<float>& bot,
     float tolerance, const PillarIntervalTree& tree,
     std::optional<std::pair<int, int>> prev_ij);
 

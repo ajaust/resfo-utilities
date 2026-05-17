@@ -214,6 +214,10 @@ std::vector<std::optional<std::tuple<int, int, int>>> find_cells_containing_poin
     auto pillar_bboxes = resfo::create_pillar_bounding_boxes(coord, dims);
     resfo::PillarIntervalTree tree(std::move(pillar_bboxes));
 
+    auto [z_min_it, z_max_it] = std::minmax_element(zcorn, zcorn + zcorn_buf.size);
+    auto top_intersection = resfo::pillar_z_intersection(coord, dims, *z_min_it);
+    auto bot_intersection = resfo::pillar_z_intersection(coord, dims, *z_max_it);
+
     const size_t num_points = points_buf.shape[0];
     std::optional<std::pair<int, int>> prev_ij;
     std::vector<std::optional<std::tuple<int, int, int>>> results;
@@ -226,7 +230,8 @@ std::vector<std::optional<std::tuple<int, int, int>>> find_cells_containing_poin
             points[p_idx * 3 + 2]
         };
 
-        auto result = resfo::grid_search_hybrid(p, coord, zcorn, dims, tolerance, tree, prev_ij);
+        auto result = resfo::grid_search_hybrid(p, coord, zcorn, dims,
+            top_intersection, bot_intersection, tolerance, tree, prev_ij);
 
         if (result.has_value()) {
             results.push_back(std::make_tuple(result->i, result->j, result->k));
