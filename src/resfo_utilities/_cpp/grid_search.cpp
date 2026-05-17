@@ -102,18 +102,18 @@ std::optional<CellIndex> grid_search(
 
         int size_i = node.i_neighbourhood;
         for (int di : {-1 * size_i, -1, 0, 1, size_i}) {
-            int ni = i + di;
-            if (ni < 0 || ni >= dims.ni) continue;
+            int nbr_i = i + di;
+            if (nbr_i < 0 || nbr_i >= dims.ni) continue;
 
             int size_j = node.j_neighbourhood;
             for (int dj : {-1 * size_j, -1, 0, 1, size_j}) {
-                int nj = j + dj;
-                if (nj < 0 || nj >= dims.nj) continue;
+                int nbr_j = j + dj;
+                if (nbr_j < 0 || nbr_j >= dims.nj) continue;
 
-                if (visited.find({ni, nj}) == visited.end()) {
-                    queue.emplace(ni, nj, p, std::max(size_i / 2, 1), std::max(size_j / 2, 1),
+                if (visited.find({nbr_i, nbr_j}) == visited.end()) {
+                    queue.emplace(nbr_i, nbr_j, p, std::max(size_i / 2, 1), std::max(size_j / 2, 1),
                                   intersection, dims);
-                    visited.insert({ni, nj});
+                    visited.insert({nbr_i, nbr_j});
                 }
             }
         }
