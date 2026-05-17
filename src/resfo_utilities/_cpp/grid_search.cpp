@@ -1,6 +1,5 @@
 #include "grid_search.hpp"
 
-#include <iostream>
 #include <unordered_set>
 #include <queue>
 #include <vector>
@@ -9,6 +8,51 @@
 #include "point_in_cell.hpp"
 
 namespace resfo {
+
+struct Candidate {
+    int i, j, k;
+    float z_dist;
+};
+
+// Gather candidate cells from the given columns, filtering by z-range.
+static std::vector<Candidate> gather_z_candidates(
+    const std::vector<std::pair<int, int>>& columns,
+    const float* zcorn, const GridDimensions& dims,
+    float pz, float bound_tol)
+{
+    std::vector<Candidate> candidates;
+    candidates.reserve(columns.size() * dims.nk);
+
+    for (const auto& [ci, cj] : columns) {
+        for (int k = 0; k < dims.nk; ++k) {
+            int zcorn_idx = (ci * dims.nj * dims.nk + cj * dims.nk + k) * NUM_CORNERS;
+            auto [z_min_it, z_max_it] = std::minmax_element(
+                zcorn + zcorn_idx, zcorn + zcorn_idx + NUM_CORNERS);
+            if (pz >= *z_min_it - 2 * bound_tol && pz <= *z_max_it + 2 * bound_tol) {
+                float z_center = (*z_min_it + *z_max_it) * 0.5f;
+                candidates.push_back({ci, cj, k, std::abs(z_center - pz)});
+            }
+        }
+    }
+
+    std::sort(candidates.begin(), candidates.end(),
+              [](const Candidate& a, const Candidate& b) { return a.z_dist < b.z_dist; });
+    return candidates;
+}
+
+// Test candidates in z-distance order, returning the first match.
+static std::optional<CellIndex> test_candidates(
+    const std::vector<Candidate>& candidates,
+    const Eigen::Vector3d& p, const float* coord, const float* zcorn,
+    const GridDimensions& dims, float tolerance)
+{
+    for (const auto& c : candidates) {
+        if (resfo::point_in_cell(p, c.i, c.j, c.k, coord, zcorn, dims, tolerance)) {
+            return CellIndex{c.i, c.j, c.k};
+        }
+    }
+    return std::nullopt;
+}
 
 std::optional<CellIndex> grid_search(
     const Eigen::Vector3d& p, const float* coord, const float* zcorn, const GridDimensions& dims,
@@ -90,37 +134,9 @@ std::optional<CellIndex> grid_search_pillar_interval_tree(
 
     auto columns = tree.query(static_cast<float>(p[0]), static_cast<float>(p[1]), bound_tol);
 
-    struct Candidate {
-        int i, j, k;
-        float z_dist;
-    };
-    std::vector<Candidate> candidates;
-    candidates.reserve(columns.size() * dims.nk);
-
-    //std::cout << "Number of candidate columns: " << columns.size() << std::endl;
     const float pz = static_cast<float>(p[2]);
-    for (const auto& [ci, cj] : columns) {
-        for (int k = 0; k < dims.nk; ++k) {
-            int zcorn_idx = (ci * dims.nj * dims.nk + cj * dims.nk + k) * NUM_CORNERS;
-            auto [z_min_it, z_max_it] = std::minmax_element(
-                zcorn + zcorn_idx, zcorn + zcorn_idx + NUM_CORNERS);
-            float z_center = (*z_min_it + *z_max_it) * 0.5f;
-            if (p[2] >= *z_min_it - 2 * bound_tol && p[2] <= *z_max_it + 2 * bound_tol) {
-                candidates.push_back({ci, cj, k, std::abs(z_center - pz)});
-            }
-        }
-    }
-
-    std::sort(candidates.begin(), candidates.end(),
-              [](const Candidate& a, const Candidate& b) { return a.z_dist < b.z_dist; });
-
-    for (const auto& c : candidates) {
-        if (resfo::point_in_cell(p, c.i, c.j, c.k, coord, zcorn, dims, tolerance)) {
-            return CellIndex{c.i, c.j, c.k};
-        }
-    }
-
-    return std::nullopt;
+    auto candidates = gather_z_candidates(columns, zcorn, dims, pz, bound_tol);
+    return test_candidates(candidates, p, coord, zcorn, dims, tolerance);
 }
 std::optional<CellIndex> grid_search_hybrid(
     const Eigen::Vector3d& p, const float* coord, const float* zcorn, const GridDimensions& dims,
@@ -140,36 +156,9 @@ std::optional<CellIndex> grid_search_hybrid(
         return grid_search(p, coord, zcorn, dims, top, bot, tolerance, prev_ij);
     }
 
-    struct Candidate {
-        int i, j, k;
-        float z_dist;
-    };
-    std::vector<Candidate> candidates;
-    candidates.reserve(columns.size() * dims.nk);
-
     const float pz = static_cast<float>(p[2]);
-    for (const auto& [ci, cj] : columns) {
-        for (int k = 0; k < dims.nk; ++k) {
-            int zcorn_idx = (ci * dims.nj * dims.nk + cj * dims.nk + k) * NUM_CORNERS;
-            auto [z_min_it, z_max_it] = std::minmax_element(
-                zcorn + zcorn_idx, zcorn + zcorn_idx + NUM_CORNERS);
-            float z_center = (*z_min_it + *z_max_it) * 0.5f;
-            if (p[2] >= *z_min_it - 2 * bound_tol && p[2] <= *z_max_it + 2 * bound_tol) {
-                candidates.push_back({ci, cj, k, std::abs(z_center - pz)});
-            }
-        }
-    }
-
-    std::sort(candidates.begin(), candidates.end(),
-              [](const Candidate& a, const Candidate& b) { return a.z_dist < b.z_dist; });
-
-    for (const auto& c : candidates) {
-        if (resfo::point_in_cell(p, c.i, c.j, c.k, coord, zcorn, dims, tolerance)) {
-            return CellIndex{c.i, c.j, c.k};
-        }
-    }
-
-    return std::nullopt;
+    auto candidates = gather_z_candidates(columns, zcorn, dims, pz, bound_tol);
+    return test_candidates(candidates, p, coord, zcorn, dims, tolerance);
 }
 
 }  // namespace resfo
