@@ -8,6 +8,7 @@
 
 #include <Eigen/Dense>
 
+#include "column_interval_tree.hpp"
 #include "grid.hpp"
 
 namespace resfo {
@@ -115,5 +116,9 @@ std::optional<CellIndex> grid_search(
     const Eigen::Vector3d& p, const float* coord, const float* zcorn, const GridDimensions& dims,
     const std::vector<float>& top, const std::vector<float>& bot, float tolerance,
     std::optional<std::pair<int, int>> prev_ij);
+
+std::optional<CellIndex> grid_search_column_interval_tree(
+    const Eigen::Vector3d& p, const float* coord, const float* zcorn, const GridDimensions& dims,
+    float tolerance, const ColumnIntervalTree& tree);
 
 }  // namespace resfo
