@@ -9,6 +9,7 @@
 #include <pybind11/stl.h>
 
 #include "grid_search.hpp"
+#include "column_interval_tree.hpp"
 #include "point_in_cell.hpp"
 
 #include <Eigen/Dense>
@@ -112,6 +113,26 @@ py::array_t<bool> point_in_cell_wrapper(
     return result;
 }
 
+std::vector<CellResult> find_cells_containing_points_column_interval_tree(
+    FloatArray points_array, FloatArray coord_array, FloatArray zcorn_array,
+    float tolerance)
+{
+    auto g = validate_and_extract(points_array, coord_array, zcorn_array);
+
+    auto bboxes = resfo::create_column_bounding_boxes(g.coord, g.dims);
+    resfo::ColumnIntervalTree tree(std::move(bboxes));
+
+    std::vector<CellResult> results;
+    results.reserve(g.num_points);
+
+    for (size_t i = 0; i < g.num_points; ++i) {
+        auto r = resfo::grid_search_column_interval_tree(
+            point_at(g.points, i), g.coord, g.zcorn, g.dims, tolerance, tree);
+        results.push_back(to_result(r));
+    }
+    return results;
+}
+
 PYBIND11_MODULE(_grid_cpp, m) {
     m.doc() = "Fast C++ implementation of grid search algorithms";
 
@@ -121,6 +142,13 @@ PYBIND11_MODULE(_grid_cpp, m) {
           py::arg("zcorn"),
           py::arg("tolerance") = 1e-6f,
           "Find cells containing given points");
+
+    m.def("find_cells_containing_points_column_interval_tree", &find_cells_containing_points_column_interval_tree,
+          py::arg("points"),
+          py::arg("coord"),
+          py::arg("zcorn"),
+          py::arg("tolerance") = 1e-6f,
+          "Find cells containing given points using column bounding box interval tree");
 
     m.def("point_in_cell", &point_in_cell_wrapper,
           py::arg("points"),
