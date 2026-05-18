@@ -55,6 +55,7 @@ set(CPP_SRC ${CMAKE_CURRENT_SOURCE_DIR}/../src/resfo_utilities/_cpp)
 
 add_executable(bench_find_cell
     bench_find_cell.cpp
+    ${CPP_SRC}/column_interval_tree.cpp
     ${CPP_SRC}/point_in_cell.cpp
     ${CPP_SRC}/grid_search.cpp
 )
@@ -68,6 +69,26 @@ else()
 endif()
 
 target_compile_options(bench_find_cell PRIVATE
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-O3>
+    $<$<CXX_COMPILER_ID:MSVC>:/O2>
+)
+
+add_executable(bench_bounding_boxes
+    bench_bounding_boxes.cpp
+    ${CPP_SRC}/column_interval_tree.cpp
+    ${CPP_SRC}/point_in_cell.cpp
+    ${CPP_SRC}/grid_search.cpp
+)
+
+target_include_directories(bench_bounding_boxes PRIVATE ${CPP_SRC} ${CMAKE_CURRENT_SOURCE_DIR})
+
+if(Eigen3_FOUND)
+    target_link_libraries(bench_bounding_boxes PRIVATE Eigen3::Eigen ceres benchmark::benchmark)
+else()
+    target_link_libraries(bench_bounding_boxes PRIVATE eigen ceres benchmark::benchmark)
+endif()
+
+target_compile_options(bench_bounding_boxes PRIVATE
     $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-O3>
     $<$<CXX_COMPILER_ID:MSVC>:/O2>
 )

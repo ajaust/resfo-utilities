@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "grid_search.hpp"
+#include "column_interval_tree.hpp"
 #include "point_in_cell.hpp"
 #include "bench_helpers.hpp"
 
@@ -109,27 +110,88 @@ static void BM_GridSearch_Custom(benchmark::State& state)
     state.SetItemsProcessed(state.iterations() * n_pts);
 }
 
+template<PointSet MakePoints>
+static void BM_GridSearchColumnIntervalTree(benchmark::State& state)
+{
+    const int ni = state.range(0);
+    const int nj = state.range(0);
+    const int nk = state.range(1);
+    const int n_pts = state.range(2);
+
+    std::vector<float> coord, zcorn;
+    make_grid(ni, nj, nk, coord, zcorn);
+    resfo::GridDimensions dims{ni, nj, nk};
+
+    auto column_bboxes = resfo::create_column_bounding_boxes(coord.data(), dims);
+    resfo::ColumnIntervalTree tree(std::move(column_bboxes));
+
+    auto points = MakePoints(ni, nj, nk, n_pts);
+
+    for (auto _ : state) {
+        for (const auto& p : points) {
+            auto r = resfo::grid_search_column_interval_tree(p, coord.data(), zcorn.data(), dims, 1e-6f, tree);
+            benchmark::DoNotOptimize(r);
+        }
+    }
+    state.SetItemsProcessed(state.iterations() * n_pts);
+}
+
+template<GridFactory MakeGrid, PointSet MakePoints>
+static void BM_GridSearchColumnIntervalTree_Custom(benchmark::State& state)
+{
+    const int ni = state.range(0);
+    const int nj = state.range(0);
+    const int nk = state.range(1);
+    const int n_pts = state.range(2);
+
+    std::vector<float> coord, zcorn;
+    MakeGrid(ni, nj, nk, coord, zcorn);
+    resfo::GridDimensions dims{ni, nj, nk};
+
+    auto column_bboxes = resfo::create_column_bounding_boxes(coord.data(), dims);
+    resfo::ColumnIntervalTree tree(std::move(column_bboxes));
+
+    auto points = MakePoints(ni, nj, nk, n_pts);
+
+    for (auto _ : state) {
+        for (const auto& p : points) {
+            auto r = resfo::grid_search_column_interval_tree(p, coord.data(), zcorn.data(), dims, 1e-6f, tree);
+            benchmark::DoNotOptimize(r);
+        }
+    }
+    state.SetItemsProcessed(state.iterations() * n_pts);
+}
+
 #define REGISTER_CUSTOM(BM, grid_fn, pts_fn, n_pts) \
     BENCHMARK_TEMPLATE(BM, grid_fn, pts_fn)->Args({50, 10, n_pts})->Args({50, 50, n_pts})
 
 // Tilted grid (pillars lean 0.5 units per depth unit)
 REGISTER_CUSTOM(BM_GridSearch_Custom, make_grid_tilted, make_points_tilted_inside,  100);
+REGISTER_CUSTOM(BM_GridSearchColumnIntervalTree_Custom, make_grid_tilted, make_points_tilted_inside,  100);
+
 REGISTER_CUSTOM(BM_GridSearch_Custom, make_grid_tilted, make_points_tilted_outside, 100);
+REGISTER_CUSTOM(BM_GridSearchColumnIntervalTree_Custom, make_grid_tilted, make_points_tilted_outside, 100);
 
 // Faulted grid (j >= nj/2 thrown down by 5 depth units)
 REGISTER_CUSTOM(BM_GridSearch_Custom, make_grid_faulted, make_points_faulted_inside,  100);
+REGISTER_CUSTOM(BM_GridSearchColumnIntervalTree_Custom, make_grid_faulted, make_points_faulted_inside,  100);
+
 REGISTER_CUSTOM(BM_GridSearch_Custom, make_grid_faulted, make_points_faulted_outside, 100);
+REGISTER_CUSTOM(BM_GridSearchColumnIntervalTree_Custom, make_grid_faulted, make_points_faulted_outside, 100);
 
 #define REGISTER(BM, suffix, n_pts) \
     BENCHMARK_TEMPLATE(BM, make_points_##suffix)->Args({50, 10, n_pts})->Args({50, 50, n_pts})
 
 // Regular grid: all inside
 REGISTER(BM_GridSearch, inside,  100);
+REGISTER(BM_GridSearchColumnIntervalTree, inside,  100);
 
 // Regular grid: all outside
 REGISTER(BM_GridSearch, outside, 100);
+REGISTER(BM_GridSearchColumnIntervalTree, outside, 100);
 
 // Regular grid: 5% outside
 REGISTER(BM_GridSearch, mixed,   100);
+REGISTER(BM_GridSearchColumnIntervalTree, mixed,   100);
 
 BENCHMARK_MAIN();
