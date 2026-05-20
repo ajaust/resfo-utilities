@@ -9,13 +9,8 @@
 
 namespace resfo {
 
-struct Candidate {
-    int i, j, k;
-    float z_dist;
-};
-
 // Gather candidate cells from the given columns, filtering by z-range.
-static std::vector<Candidate> gather_z_candidates(
+std::vector<Candidate> gather_z_candidates(
     const std::vector<std::pair<int, int>>& columns,
     const float* zcorn, const GridDimensions& dims,
     float pz, float bound_tol)
@@ -41,7 +36,7 @@ static std::vector<Candidate> gather_z_candidates(
 }
 
 // Test candidates in z-distance order, returning the first match.
-static std::optional<CellIndex> test_candidates(
+std::optional<CellIndex> test_candidates(
     const std::vector<Candidate>& candidates,
     const Eigen::Vector3d& p, const float* coord, const float* zcorn,
     const GridDimensions& dims, float tolerance)

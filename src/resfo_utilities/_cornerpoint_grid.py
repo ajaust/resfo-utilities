@@ -32,6 +32,7 @@ from numpy import typing as npt
 from ._grid_cpp import (
     find_cells_containing_points,
     find_cells_containing_points_column_interval_tree,
+    find_cells_containing_points_hybrid,
     point_in_cell,
 )
 
@@ -345,6 +346,46 @@ class CornerpointGrid:
             points = self.map_axes.transform_map_points(points)
 
         return find_cells_containing_points_column_interval_tree(
+            np.ascontiguousarray(points),
+            self.coord,
+            self.zcorn,
+            tolerance,
+        )
+
+    def find_cell_containing_point_hybrid(
+        self,
+        points: npt.ArrayLike,
+        map_coordinates: bool = True,
+        tolerance: float = 1.0e-6,
+    ) -> list[tuple[int, int, int] | None]:
+        """Find a cell in the grid which contains the given point.
+
+        Uses a 1D interval tree over column bounding boxes when few
+        candidate columns are found, otherwise falls back to the
+        heuristic search.
+
+        Args:
+            points:
+                The points to find cells for.
+            map_coordinates:
+                Whether points are in the map coordinate system.
+                Defaults to True.
+            tolerance:
+                The maximum distance to the cell boundary a point can have to
+                be considered to be contained in the cell.
+
+        Returns:
+            list of i,j,k indices for each point (or None if the
+            point is not contained in any cell.
+        """
+        points = np.asarray(points, dtype=np.float32)
+        if len(points.shape) == 1:
+            points = points[np.newaxis, :]
+
+        if map_coordinates and self.map_axes is not None:
+            points = self.map_axes.transform_map_points(points)
+
+        return find_cells_containing_points_hybrid(
             np.ascontiguousarray(points),
             self.coord,
             self.zcorn,

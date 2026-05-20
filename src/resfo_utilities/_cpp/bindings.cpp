@@ -133,6 +133,54 @@ std::vector<CellResult> find_cells_containing_points_column_interval_tree(
     return results;
 }
 
+std::vector<CellResult> find_cells_containing_points_hybrid(
+    FloatArray points_array, FloatArray coord_array, FloatArray zcorn_array,
+    float tolerance)
+{
+    auto g = validate_and_extract(points_array, coord_array, zcorn_array);
+
+    auto bboxes = resfo::create_column_bounding_boxes(g.coord, g.dims);
+    resfo::ColumnIntervalTree tree(std::move(bboxes));
+
+    constexpr size_t fallback_threshold = 4;
+    float bound_tol = 20.0f * tolerance;
+
+    // Lazy: only computed if the bfs fallback triggers
+    std::vector<float> top, bot;
+    bool bfs_ready = false;
+
+    std::vector<CellResult> results;
+    results.reserve(g.num_points);
+    std::optional<std::pair<int, int>> prev_ij;
+
+    for (size_t i = 0; i < g.num_points; ++i) {
+        auto p = point_at(g.points, i);
+        auto columns = tree.query(
+            static_cast<float>(p[0]), static_cast<float>(p[1]), bound_tol);
+
+        std::optional<resfo::CellIndex> r;
+
+        if (columns.size() <= fallback_threshold) {
+            auto candidates = resfo::gather_z_candidates(
+                columns, g.zcorn, g.dims, static_cast<float>(p[2]), bound_tol);
+            r = resfo::test_candidates(candidates, p, g.coord, g.zcorn, g.dims, tolerance);
+        } else {
+            if (!bfs_ready) {
+                auto [z_min, z_max] = std::minmax_element(
+                    g.zcorn, g.zcorn + g.zcorn_size);
+                top = resfo::pillar_z_intersection(g.coord, g.dims, *z_min);
+                bot = resfo::pillar_z_intersection(g.coord, g.dims, *z_max);
+                bfs_ready = true;
+            }
+            r = resfo::grid_search(p, g.coord, g.zcorn, g.dims, top, bot, tolerance, prev_ij);
+        }
+
+        results.push_back(to_result(r));
+        prev_ij = r ? std::make_optional(std::make_pair(r->i, r->j)) : std::nullopt;
+    }
+    return results;
+}
+
 PYBIND11_MODULE(_grid_cpp, m) {
     m.doc() = "Fast C++ implementation of grid search algorithms";
 
@@ -149,6 +197,13 @@ PYBIND11_MODULE(_grid_cpp, m) {
           py::arg("zcorn"),
           py::arg("tolerance") = 1e-6f,
           "Find cells containing given points using column bounding box interval tree");
+
+    m.def("find_cells_containing_points_hybrid", &find_cells_containing_points_hybrid,
+          py::arg("points"),
+          py::arg("coord"),
+          py::arg("zcorn"),
+          py::arg("tolerance") = 1e-6f,
+          "Find cells containing given points using hybrid column tree / bfs search");
 
     m.def("point_in_cell", &point_in_cell_wrapper,
           py::arg("points"),

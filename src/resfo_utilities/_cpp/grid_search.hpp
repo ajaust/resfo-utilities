@@ -121,4 +121,19 @@ std::optional<CellIndex> grid_search_column_interval_tree(
     const Eigen::Vector3d& p, const float* coord, const float* zcorn, const GridDimensions& dims,
     float tolerance, const ColumnIntervalTree& tree);
 
+struct Candidate {
+    int i, j, k;
+    float z_dist;
+};
+
+std::vector<Candidate> gather_z_candidates(
+    const std::vector<std::pair<int, int>>& columns,
+    const float* zcorn, const GridDimensions& dims,
+    float pz, float bound_tol);
+
+std::optional<CellIndex> test_candidates(
+    const std::vector<Candidate>& candidates,
+    const Eigen::Vector3d& p, const float* coord, const float* zcorn,
+    const GridDimensions& dims, float tolerance);
+
 }  // namespace resfo
