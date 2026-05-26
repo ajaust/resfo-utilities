@@ -7,6 +7,7 @@ import pytest
 import resfo
 from hypothesis import HealthCheck, assume, example, given, settings
 from hypothesis.extra.numpy import arrays, from_dtype
+from numpy import typing as npt
 from numpy.testing import assert_allclose
 
 from resfo_utilities import (
@@ -27,6 +28,91 @@ def write_to_buffer(file_contents):
 
 def pad_to(lst: list[int], target_len: int):
     return np.pad(lst, (0, target_len - len(lst)), mode="constant")
+
+
+TILT_FACTOR = 0.5
+FAULT_THROW = 5.0
+SEARCH_METHODS = (
+    "find_cell_containing_point_column_interval_tree",
+    "find_cell_containing_point_hybrid",
+)
+
+
+def _make_regular_grid(ni: int, nj: int, nk: int) -> CornerpointGrid:
+    coord = np.zeros((ni + 1, nj + 1, 2, 3), dtype=np.float32)
+    zcorn = np.zeros((ni, nj, nk, 8), dtype=np.float32)
+    for i, j in product(range(ni + 1), range(nj + 1)):
+        coord[i, j, 0] = [i, j, 0.0]
+        coord[i, j, 1] = [i, j, float(nk)]
+    for i, j, k in product(range(ni), range(nj), range(nk)):
+        zcorn[i, j, k] = [k] * 4 + [k + 1] * 4
+    return CornerpointGrid(coord, zcorn)
+
+
+def _make_tilted_grid(ni: int, nj: int, nk: int) -> CornerpointGrid:
+    coord = np.zeros((ni + 1, nj + 1, 2, 3), dtype=np.float32)
+    zcorn = np.zeros((ni, nj, nk, 8), dtype=np.float32)
+    for i, j in product(range(ni + 1), range(nj + 1)):
+        coord[i, j, 0] = [i, j, 0.0]
+        coord[i, j, 1] = [i + TILT_FACTOR * nk, j, float(nk)]
+    for i, j, k in product(range(ni), range(nj), range(nk)):
+        zcorn[i, j, k] = [k] * 4 + [k + 1] * 4
+    return CornerpointGrid(coord, zcorn)
+
+
+def _make_faulted_grid(ni: int, nj: int, nk: int) -> CornerpointGrid:
+    coord = np.zeros((ni + 1, nj + 1, 2, 3), dtype=np.float32)
+    zcorn = np.zeros((ni, nj, nk, 8), dtype=np.float32)
+    for i, j in product(range(ni + 1), range(nj + 1)):
+        coord[i, j, 0] = [i, j, 0.0]
+        coord[i, j, 1] = [i, j, float(nk) + FAULT_THROW]
+    for i, j, k in product(range(ni), range(nj), range(nk)):
+        offset = FAULT_THROW if j >= nj // 2 else 0.0
+        zcorn[i, j, k] = [k + offset] * 4 + [k + 1 + offset] * 4
+    return CornerpointGrid(coord, zcorn)
+
+
+def _is_neighbor(cell_a, cell_b):
+    """Check if two cells are direct neighbors (differ by at most 1 in each axis)."""
+    if cell_a is None or cell_b is None:
+        return False
+    diff = np.abs(np.array(cell_a) - np.array(cell_b))
+    return np.max(diff) <= 1
+
+
+def _assert_alternative_searches_match_baseline(
+    grid: CornerpointGrid,
+    points: npt.NDArray[np.float32],
+    *,
+    map_coordinates: bool = True,
+    tolerance: float = 1.0e-6,
+) -> None:
+    expected = grid.find_cell_containing_point(
+        points,
+        map_coordinates=map_coordinates,
+        tolerance=tolerance,
+    )
+    for method_name in SEARCH_METHODS:
+        method = getattr(grid, method_name)
+        actual = method(points, map_coordinates=map_coordinates, tolerance=tolerance)
+        for idx, (exp, act) in enumerate(zip(expected, actual, strict=False)):
+            if act == exp:
+                continue
+            # If the results differ, check if both cells contain the point
+            # (boundary ambiguity: point lies on a shared face).
+            assert _is_neighbor(exp, act), (
+                f"Method {method_name}, point index {idx}: "
+                f"got {act}, expected {exp} (not neighbors)"
+            )
+            pt = points[idx : idx + 1]
+            assert grid.point_in_cell(pt, *act)[0], (
+                f"Method {method_name}, point index {idx}: "
+                f"returned {act} but point_in_cell is False"
+            )
+            assert grid.point_in_cell(pt, *exp)[0], (
+                f"Method {method_name}, point index {idx}: "
+                f"expected {exp} but point_in_cell is False"
+            )
 
 
 @given(egrids)
@@ -397,6 +483,16 @@ def test_that_found_cell_contains_point(grid, point, data):
         assert not grid.point_in_cell(point, i, j, k, tolerance=1e-14)
     else:
         assert grid.point_in_cell(point, *cell)
+
+
+@given(grid=regular_grids(), point=points)
+# Point on shared face with different cell owning it
+@example(grid=_make_regular_grid(1, 4, 1), point=(0.0, 2.0, 0.0))
+def test_that_alternative_search_methods_match_baseline_on_regular_grids(grid, point):
+    _assert_alternative_searches_match_baseline(
+        grid,
+        np.array([point], dtype=np.float32),
+    )
 
 
 @given(
@@ -867,3 +963,37 @@ def test_that_point_is_found_in_line_segment():
     )
     assert grid.find_cell_containing_point((0.0, 0.0, 1.0)) == [(0, 0, 0)]
     assert grid.find_cell_containing_point((3.0, 3.0, 2.0)) == [None]
+
+
+@pytest.mark.parametrize(
+    ("grid", "points"),
+    [
+        pytest.param(
+            _make_tilted_grid(4, 3, 4),
+            np.array(
+                [
+                    (1.5 + TILT_FACTOR * 1.5, 1.5, 1.5),
+                    (0.5 + TILT_FACTOR * 0.5, 0.5, 0.5),
+                    (8.0, 1.5, 1.5),
+                ],
+                dtype=np.float32,
+            ),
+            id="tilted",
+        ),
+        pytest.param(
+            _make_faulted_grid(3, 5, 4),
+            np.array(
+                [
+                    (1.5, 1.5, 1.5),
+                    (1.5, 2.5, 1.5 + FAULT_THROW),
+                    (1.5, 2.5, 1.5),
+                    (8.0, 8.0, 8.0),
+                ],
+                dtype=np.float32,
+            ),
+            id="faulted",
+        ),
+    ],
+)
+def test_that_alternative_search_methods_match_baseline_on_pruned_grids(grid, points):
+    _assert_alternative_searches_match_baseline(grid, points)
