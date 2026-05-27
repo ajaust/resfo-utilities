@@ -10,9 +10,11 @@
 namespace resfo {
 
 std::vector<ColumnBoundingBox> create_column_bounding_boxes(const float* coord,
-                                                            const resfo::GridDimensions& dims) {
+                                                            const resfo::GridDimensions& dims,
+                                                            const std::pair<float, float>& z_minmax) {
     std::vector<ColumnBoundingBox> boxes;
     boxes.reserve(dims.ni * dims.nj);
+    const auto& [z_min, z_max] = z_minmax;
 
     for (int i = 0; i < dims.ni; ++i) {
         for (int j = 0; j < dims.nj; ++j) {
@@ -25,14 +27,36 @@ std::vector<ColumnBoundingBox> create_column_bounding_boxes(const float* coord,
 
             ColumnBoundingBox box;
             box.cell_index = {i, j, 0};
+
+
+            auto update_bounds = [&box](const std::pair<float, float>& xy) {
+                const auto& [x, y] = xy;
+                box.min_x = std::min(box.min_x, x);
+                box.max_x = std::max(box.max_x, x);
+                box.min_y = std::min(box.min_y, y);
+                box.max_y = std::max(box.max_y, y);
+            };
+
             for (int v = 0; v < 4; ++v) {
                 int idx = pillar_idx[v];
-                // Top and bottom of each pillar line (6 floats: x,y,z,x,y,z).
-                box.min_x = std::min(box.min_x, std::min(coord[idx], coord[idx + 3]));
-                box.max_x = std::max(box.max_x, std::max(coord[idx], coord[idx + 3]));
-                box.min_y = std::min(box.min_y, std::min(coord[idx + 1], coord[idx + 4]));
-                box.max_y = std::max(box.max_y, std::max(coord[idx + 1], coord[idx + 4]));
-            }
+
+                float x1 = coord[idx];
+                float y1 = coord[idx + 1];
+                float z1 = coord[idx + 2];
+                float x2 = coord[idx + 3];
+                float y2 = coord[idx + 4];
+                float z2 = coord[idx + 5];
+
+                auto pillar_x_y_at = [&](float z) {
+                    float t = (z - z1) / (z2 - z1);
+                    float x = x1 + t * (x2 - x1);
+                    float y = y1 + t * (y2 - y1);
+                    return std::pair<float, float>{x, y};
+                };
+
+                update_bounds(pillar_x_y_at(z_min));
+                update_bounds(pillar_x_y_at(z_max));
+             }
 
             boxes.push_back(std::move(box));
         }

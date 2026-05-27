@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <tuple>
@@ -119,7 +120,16 @@ std::vector<CellResult> find_cells_containing_points_column_interval_tree(
 {
     auto g = validate_and_extract(points_array, coord_array, zcorn_array);
 
-    auto bboxes = resfo::create_column_bounding_boxes(g.coord, g.dims);
+    float z_min = std::numeric_limits<float>::max();
+    float z_max = std::numeric_limits<float>::lowest();
+    for (size_t i = 0; i < g.num_points; ++i) {
+        const auto p = point_at(g.points, i);
+        const float z = static_cast<float>(p[2]);
+        z_min = std::min(z_min, z);
+        z_max = std::max(z_max, z);
+    };
+
+    auto bboxes = resfo::create_column_bounding_boxes(g.coord, g.dims, {z_min, z_max});
     resfo::ColumnIntervalTree tree(std::move(bboxes));
 
     std::vector<CellResult> results;
@@ -139,7 +149,16 @@ std::vector<CellResult> find_cells_containing_points_hybrid(
 {
     auto g = validate_and_extract(points_array, coord_array, zcorn_array);
 
-    auto bboxes = resfo::create_column_bounding_boxes(g.coord, g.dims);
+    float z_min = std::numeric_limits<float>::max();
+    float z_max = std::numeric_limits<float>::lowest();
+    for (size_t i = 0; i < g.num_points; ++i) {
+        const auto p = point_at(g.points, i);
+        const float z = static_cast<float>(p[2]);
+        z_min = std::min(z_min, z);
+        z_max = std::max(z_max, z);
+    };
+
+    auto bboxes = resfo::create_column_bounding_boxes(g.coord, g.dims, {z_min, z_max});
     resfo::ColumnIntervalTree tree(std::move(bboxes));
 
     constexpr size_t fallback_threshold = 4;

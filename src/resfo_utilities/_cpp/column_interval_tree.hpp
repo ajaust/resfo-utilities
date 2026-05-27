@@ -4,6 +4,7 @@
 #include <limits>
 #include <memory>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "grid.hpp"
@@ -32,7 +33,8 @@ struct ColumnBoundingBox {
 
 std::vector<ColumnBoundingBox> create_column_bounding_boxes(
     const float* coord,
-    const resfo::GridDimensions& dims
+    const resfo::GridDimensions& dims,
+    const std::pair<float, float>& z_minmax
 );
 
 // 1D interval tree over ColumnBoundingBox with secondary-axis filtering.
