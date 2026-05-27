@@ -47,8 +47,14 @@ std::vector<ColumnBoundingBox> create_column_bounding_boxes(const float* coord,
                 float y2 = coord[idx + 4];
                 float z2 = coord[idx + 5];
 
+                float dz = z2 - z1;
+                if (std::abs(dz) <= std::numeric_limits<float>::epsilon() * std::max(std::abs(z1), std::abs(z2))) {
+                    update_bounds({x1, y1});
+                    continue;
+                }
+
                 auto pillar_x_y_at = [&](float z) {
-                    float t = (z - z1) / (z2 - z1);
+                    float t = (z - z1) / dz;
                     float x = x1 + t * (x2 - x1);
                     float y = y1 + t * (y2 - y1);
                     return std::pair<float, float>{x, y};
