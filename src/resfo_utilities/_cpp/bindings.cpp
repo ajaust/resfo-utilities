@@ -1,13 +1,16 @@
 #include <algorithm>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 
+#include "column_interval_tree.hpp"
 #include "grid_search.hpp"
 #include "point_in_cell.hpp"
 
@@ -76,20 +79,22 @@ std::vector<CellResult> find_cells_containing_points(
 {
     auto g = validate_and_extract(points_array, coord_array, zcorn_array);
 
-    auto [z_min, z_max] = std::minmax_element(g.zcorn, g.zcorn + g.zcorn_size);
-    auto top = resfo::pillar_z_intersection(g.coord, g.dims, *z_min);
-    auto bot = resfo::pillar_z_intersection(g.coord, g.dims, *z_max);
+    if (g.num_points == 0) return std::vector<CellResult>();
+
+    auto build_interval_tree = [&g]() {
+        auto [z_min, z_max] = std::minmax_element(g.zcorn, g.zcorn + g.zcorn_size);
+        auto bboxes = resfo::create_column_bounding_boxes(g.coord, g.dims, {*z_min, *z_max});
+        return resfo::ColumnIntervalTree(std::move(bboxes));
+    };
 
     std::vector<CellResult> results;
     results.reserve(g.num_points);
-    std::optional<std::pair<int, int>> prev_ij;
 
+    auto tree = build_interval_tree();
     for (size_t i = 0; i < g.num_points; ++i) {
         auto r = resfo::grid_search(
-            point_at(g.points, i), g.coord, g.zcorn, g.dims, top, bot, tolerance, prev_ij);
-
+            point_at(g.points, i), g.coord, g.zcorn, g.dims, tree, tolerance);
         results.push_back(to_result(r));
-        prev_ij = r ? std::make_optional(std::make_pair(r->i, r->j)) : std::nullopt;
     }
     return results;
 }
