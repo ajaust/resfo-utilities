@@ -7,10 +7,10 @@
 namespace resfo {
 
 // Compute (x, y) bounding boxes for each column by interpolating the four
-// corner pillars at the given z-range. Pillars are lines in 3D space, so the
-// (x, y) extent of a column depends on the depth at which it is evaluated. By
-// passing the zcorn corner depth range we ensure that the bounding boxes cover
-// the actual pillar positions at those depths.
+// corner pillars at the zcorn depth range. Pillars are lines in 3D space, so
+// the (x, y) extent of a column varies with depth. Using the full zcorn
+// z-range ensures the bounding boxes enclose the pillar positions across the
+// entire grid depth.
 std::vector<ColumnBoundingBox> create_column_bounding_boxes(const float* coord,
                                                             const resfo::GridDimensions& dims,
                                                             const std::pair<float, float>& z_minmax) {
