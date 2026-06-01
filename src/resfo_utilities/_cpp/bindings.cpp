@@ -58,11 +58,7 @@ static GridArrays validate_and_extract(
 }
 
 static Eigen::Vector3d point_at(const float* points, size_t idx) {
-    return Eigen::Vector3d{
-        points[idx * 3],
-        points[idx * 3 + 1],
-        points[idx * 3 + 2]
-    };
+    return Eigen::Vector3f::Map(&points[idx * 3]).cast<double>();
 }
 
 using CellResult = std::optional<std::tuple<int, int, int>>;
