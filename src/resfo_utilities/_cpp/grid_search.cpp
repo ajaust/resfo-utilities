@@ -1,5 +1,6 @@
 #include "grid_search.hpp"
 
+#include <array>
 #include <limits>
 #include <vector>
 
@@ -52,19 +53,23 @@ static std::optional<CellIndex> test_candidates(
     return std::nullopt;
 }
 
-// Filter candidate columns by computing tight (x,y) bounds at the query depth.
-// Each column is defined by 4 pillars; we interpolate their (x,y) at query z
-// and reject columns where the point is clearly outside.
-static std::vector<std::pair<int, int>> filter_columns_at_depth(
-    const std::vector<std::pair<int, int>>& columns,
+// Order candidate columns by distance from the (x,y) bounding box at query
+// depth. Each column is defined by 4 pillars; we interpolate their (x,y) at
+// the query z and compute how far the point lies from the resulting bbox.
+// Columns are sorted by this distance so that the most likely hits are tested
+// first. No column is discarded — the trilinear cell interior can extend
+// beyond the pillar-corner bounding box at a given depth.
+static void order_columns_by_depth_distance(
+    std::vector<std::pair<int, int>>& columns,
     const float* coord, const GridDimensions& dims,
     float px, float py, float pz, float tol)
 {
-    std::vector<std::pair<int, int>> filtered;
-    filtered.reserve(columns.size());
+    std::vector<std::pair<float, int>> distances;
+    distances.reserve(columns.size());
 
-    for (const auto& [ci, cj] : columns) {
-        const int pillar_idx[4] = {
+    for (int idx = 0; idx < static_cast<int>(columns.size()); ++idx) {
+        const auto& [ci, cj] = columns[idx];
+        const std::array<int, 4> pillar_idx = {
             (ci * (dims.nj + 1) + cj) * 6,
             (ci * (dims.nj + 1) + (cj + 1)) * 6,
             ((ci + 1) * (dims.nj + 1) + cj) * 6,
@@ -98,13 +103,20 @@ static std::vector<std::pair<int, int>> filter_columns_at_depth(
             max_y = std::max(max_y, y_at_z);
         }
 
-        if (px >= min_x - tol && px <= max_x + tol &&
-            py >= min_y - tol && py <= max_y + tol) {
-            filtered.emplace_back(ci, cj);
-        }
+        float dx = std::abs(px - max_x - tol) + std::abs(min_x + tol - px);
+        float dy = std::abs(py - max_y - tol) + std::abs(min_y + tol - py);
+        distances.push_back({dx + dy, idx});
     }
 
-    return filtered;
+    std::sort(distances.begin(), distances.end(),
+              [](const auto& a, const auto& b) { return a.first < b.first; });
+
+    std::vector<std::pair<int, int>> sorted;
+    sorted.reserve(columns.size());
+    for (const auto& [_, idx] : distances) {
+        sorted.push_back(columns[idx]);
+    }
+    columns = std::move(sorted);
 }
 
 std::optional<CellIndex> grid_search(
@@ -118,7 +130,7 @@ std::optional<CellIndex> grid_search(
     }
 
     auto columns = tree.query(static_cast<float>(p[0]), static_cast<float>(p[1]), bound_tol);
-    columns = filter_columns_at_depth(
+    order_columns_by_depth_distance(
         columns, coord, dims,
         static_cast<float>(p[0]), static_cast<float>(p[1]), static_cast<float>(p[2]),
         bound_tol);
